@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Tech - Teknoloji Mağazası</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="css/footer.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <script src="js/error-handler.js"></script>
+</head>
+<body>
+  <!-- Include Navbar -->
+  <div id="navbar-container"></div>
+
+  <main>
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-slide">
+        <div class="hero-content">
+          <h2>Teknoloji Tutkunları İçin En İyi Ürünler</h2>
+          <p>3D yazıcılar, elektronik komponentler ve maker ekipmanları</p>
+          <a href="products.html" class="btn">Ürünleri Keşfet</a>
+        </div>
+        <img src="/images/Banner.png" alt="Raspberry Pi 5">
+      </div>
+    </section>
+
+    <!-- Categories Section -->
+    <section class="category-section">
+      <div class="container">
+        <div class="section-title">
+          <h2>Kategoriler</h2>
+          <p>İhtiyacınız olan tüm teknoloji ürünleri</p>
+        </div>
+        <div class="category-grid">
+          <a href="products.html?category=Elektronik" class="category-card">
+            <img src="/images/elektronik.png" alt="Elektronik">
+            <div class="category-card-content">
+              <h3>Elektronik</h3>
+              <p>Projeleriniz için gerekli tüm komponentler</p>
+            </div>
+          </a>
+          <a href="products.html?category=Akıllı Ev" class="category-card">
+            <img src="/images/AkıllıEv.jpg" alt="Akıllı Ev">
+            <div class="category-card-content">
+              <h3>Akıllı Ev</h3>
+              <p>Evinizi teknoloji ile donatın</p>
+            </div>
+          </a>
+          <a href="products.html?category=Yedek Parçalar" class="category-card">
+            <img src="https://www.evofone.com/UPLOAD/URUNLER/creality-sprite-extruder-pro-1.jpg" alt="Yedek Parçalar">
+            <div class="category-card-content">
+              <h3>Yedek Parçalar</h3>
+              <p>Cihazlarınız için gerekli tüm parçalar</p>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Featured Products Section -->
+    <section class="product-section">
+      <div class="container">
+        <div class="section-title">
+          <h2>Öne Çıkan Ürünler</h2>
+          <p>En çok tercih edilen ürünlerimiz</p>
+        </div>
+        <div class="product-grid" id="featuredProductsContainer">
+          <!-- Ürünler JavaScript ile yüklenecek -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="feature-section">
+      <div class="container">
+        <div class="section-title">
+          <h2>Neden Bizi Tercih Etmelisiniz?</h2>
+          <p>Size sunduğumuz avantajlar</p>
+        </div>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-truck"></i>
+            </div>
+            <h3 class="feature-title">Hızlı Teslimat</h3>
+            <p class="feature-text">Siparişleriniz aynı gün kargoya verilir ve en hızlı şekilde size ulaştırılır.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-shield-alt"></i>
+            </div>
+            <h3 class="feature-title">Güvenli Ödeme</h3>
+            <p class="feature-text">Tüm ödeme işlemleriniz SSL sertifikası ile güvence altındadır.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-headset"></i>
+            </div>
+            <h3 class="feature-title">7/24 Destek</h3>
+            <p class="feature-text">Teknik destek ekibimiz her zaman yanınızda ve sorularınıza hazır.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-undo"></i>
+            </div>
+            <h3 class="feature-title">Kolay İade</h3>
+            <p class="feature-text">14 gün içerisinde koşulsuz iade garantisi sunuyoruz.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Newsletter Section -->
+    <section class="newsletter-section">
+      <div class="container">
+        <div class="newsletter-content">
+          <h2>Bültenimize Abone Olun</h2>
+          <p>Yeni ürünler, indirimler ve kampanyalardan haberdar olmak için e-posta listemize kaydolun.</p>
+          <form class="newsletter-form">
+            <input type="email" placeholder="E-posta adresiniz" required>
+            <button type="submit">Abone Ol</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Include Footer -->
+  <div id="footer-container"></div>
+
+  <script>
+    fetch('components/navbar.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('navbar-container').innerHTML = data;
+      });
+      
+    fetch('components/footer.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('footer-container').innerHTML = data;
+      });
+  </script>
+  <script src="js/main.js"></script>
+  <script src="js/home.js"></script>
+</body>
+</html> 

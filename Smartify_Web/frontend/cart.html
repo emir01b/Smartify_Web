@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sepetim - 3D Tech</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="css/footer.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+  <!-- Include Navbar -->
+  <div id="navbar-container"></div>
+
+  <!-- Cart Section -->
+  <section class="cart-section">
+    <div class="container">
+      <h1>Alışveriş Sepetim</h1>
+      
+      <div class="cart-content">
+        <div class="cart-items">
+          <table class="cart-table">
+            <thead>
+              <tr>
+                <th>Ürün</th>
+                <th>Fiyat</th>
+                <th>Adet</th>
+                <th>Toplam</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="cartItems">
+              <!-- Sepet öğeleri JavaScript ile yüklenecek -->
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="cart-summary">
+          <h3>Sipariş Özeti</h3>
+          <div class="summary-row">
+            <span>Ara Toplam</span>
+            <span id="subtotal">0.00 ₺</span>
+          </div>
+          <div class="summary-row">
+            <span>Kargo</span>
+            <span id="shipping">0.00 ₺</span>
+          </div>
+          <div class="summary-row">
+            <span>KDV (%18)</span>
+            <span id="tax">0.00 ₺</span>
+          </div>
+          <div class="summary-row total">
+            <span>Toplam</span>
+            <span id="total">0.00 ₺</span>
+          </div>
+          <button class="btn checkout-btn">Ödemeye Geç</button>
+          <div class="continue-shopping">
+            <a href="products.html">
+              <i class="fas fa-arrow-left"></i>
+              Alışverişe Devam Et
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Include Footer -->
+  <div id="footer-container"></div>
+
+  <script>
+    fetch('components/navbar.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('navbar-container').innerHTML = data;
+      });
+      
+    fetch('components/footer.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('footer-container').innerHTML = data;
+      });
+  </script>
+  <script src="js/main.js"></script>
+  <script src="js/cart.js"></script>
+</body>
+</html> 

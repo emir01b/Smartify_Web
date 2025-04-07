@@ -7,6 +7,9 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.example.smartify.ui.screens.home.HomeScreen
+import com.example.smartify.ui.screens.login.LoginScreen
+import com.example.smartify.ui.screens.register.RegisterScreen
 import com.example.smartify.ui.screens.splash.SplashScreen
 import com.example.smartify.utils.Constants
 
@@ -23,37 +26,53 @@ fun AppNavigation(
         // Splash Screen
         composable(Constants.Routes.SPLASH) {
             SplashScreen(
-                onNavigateToLogin = { navController.navigate(Constants.Routes.LOGIN) },
-                onNavigateToHome = { navController.navigate(Constants.Routes.HOME) }
+                onNavigateToLogin = { 
+                    navController.navigate(Constants.Routes.LOGIN) {
+                        popUpTo(Constants.Routes.SPLASH) { inclusive = true }
+                    }
+                },
+                onNavigateToHome = { 
+                    navController.navigate(Constants.Routes.HOME) {
+                        popUpTo(Constants.Routes.SPLASH) { inclusive = true }
+                    }
+                }
             )
         }
         
         // Login Screen
         composable(Constants.Routes.LOGIN) {
-            // LoginScreen(
-            //     onNavigateToRegister = { navController.navigate(Constants.Routes.REGISTER) },
-            //     onNavigateToHome = { navController.navigate(Constants.Routes.HOME) }
-            // )
+            LoginScreen(
+                onNavigateToRegister = { navController.navigate(Constants.Routes.REGISTER) },
+                onNavigateToHome = { 
+                    navController.navigate(Constants.Routes.HOME) {
+                        popUpTo(Constants.Routes.LOGIN) { inclusive = true }
+                    }
+                }
+            )
         }
         
         // Register Screen
         composable(Constants.Routes.REGISTER) {
-            // RegisterScreen(
-            //     onNavigateToLogin = { navController.navigate(Constants.Routes.LOGIN) },
-            //     onNavigateToHome = { navController.navigate(Constants.Routes.HOME) }
-            // )
+            RegisterScreen(
+                onNavigateToLogin = { navController.popBackStack() },
+                onNavigateToHome = { 
+                    navController.navigate(Constants.Routes.HOME) {
+                        popUpTo(Constants.Routes.REGISTER) { inclusive = true }
+                    }
+                }
+            )
         }
         
         // Home Screen
         composable(Constants.Routes.HOME) {
-            // HomeScreen(
-            //     onNavigateToProductDetail = { productId ->
-            //         navController.navigate(Constants.Routes.PRODUCT_DETAIL.replace("{productId}", productId))
-            //     },
-            //     onNavigateToCart = { navController.navigate(Constants.Routes.CART) },
-            //     onNavigateToWishlist = { navController.navigate(Constants.Routes.WISHLIST) },
-            //     onNavigateToProfile = { navController.navigate(Constants.Routes.PROFILE) }
-            // )
+            HomeScreen(
+                onNavigateToProductDetail = { productId ->
+                    navController.navigate(Constants.Routes.PRODUCT_DETAIL.replace("{productId}", productId))
+                },
+                onNavigateToCart = { navController.navigate(Constants.Routes.CART) },
+                onNavigateToWishlist = { navController.navigate(Constants.Routes.WISHLIST) },
+                onNavigateToProfile = { navController.navigate(Constants.Routes.PROFILE) }
+            )
         }
         
         // Product Detail Screen

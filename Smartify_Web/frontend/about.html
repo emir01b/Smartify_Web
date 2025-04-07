@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hakkımızda - 3D Tech</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/footer.css">
+    <link rel="stylesheet" href="css/about.css">
+    <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+    <!-- Include Navbar -->
+    <div id="navbar-container"></div>
+
+    <!-- About Hero Section -->
+    <section class="about-hero">
+        <div class="container">
+            <div class="about-hero-content">
+                <h1>Hakkımızda</h1>
+                <p>3D Tech olarak teknoloji tutkunlarına en iyi ürünleri sunuyoruz</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Content -->
+    <section class="about-content">
+        <div class="container">
+            <div class="about-grid">
+                <div class="about-text">
+                    <h2>Biz Kimiz?</h2>
+                    <p>3D Tech olarak, 2020 yılından bu yana teknoloji tutkunlarına hizmet veriyoruz. Amacımız, müşterilerimize en kaliteli 3D yazıcıları, elektronik komponentleri ve maker ekipmanlarını uygun fiyatlarla sunmaktır.</p>
+                    <p>Deneyimli ekibimiz ve geniş ürün yelpazemizle, hem hobi amaçlı kullanıcılara hem de profesyonel kullanıcılara hitap ediyoruz. Müşteri memnuniyetini her zaman ön planda tutarak, satış öncesi ve sonrası teknik destek hizmetlerimizle yanınızdayız.</p>
+                </div>
+                <div class="about-image">
+                    <img src="https://www.evofone.com/UPLOAD/URUNLER/creality-ender-3-v3-se-3d-yazici-1.jpg" alt="3D Tech Mağaza">
+                </div>
+            </div>
+
+            <div class="values-section">
+                <h2>Değerlerimiz</h2>
+                <div class="values-grid">
+                    <div class="value-card">
+                        <div class="value-icon">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <h3>Kalite</h3>
+                        <p>En kaliteli ürünleri müşterilerimizle buluşturuyoruz.</p>
+                    </div>
+                    <div class="value-card">
+                        <div class="value-icon">
+                            <i class="fas fa-handshake"></i>
+                        </div>
+                        <h3>Güven</h3>
+                        <p>Müşterilerimizle güvene dayalı ilişkiler kuruyoruz.</p>
+                    </div>
+                    <div class="value-card">
+                        <div class="value-icon">
+                            <i class="fas fa-headset"></i>
+                        </div>
+                        <h3>Destek</h3>
+                        <p>7/24 teknik destek ile yanınızdayız.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="team-section">
+                <h2>Ekibimiz</h2>
+                <div class="team-grid">
+                    <div class="team-card">
+                        <img src="images/team1.jpg" alt="Takım Üyesi">
+                        <h3>Ahmet Yılmaz</h3>
+                        <p>Kurucu & CEO</p>
+                    </div>
+                    <div class="team-card">
+                        <img src="images/team2.jpg" alt="Takım Üyesi">
+                        <h3>Ayşe Demir</h3>
+                        <p>Teknik Müdür</p>
+                    </div>
+                    <div class="team-card">
+                        <img src="images/team3.jpg" alt="Takım Üyesi">
+                        <h3>Mehmet Kaya</h3>
+                        <p>Satış Müdürü</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Include Footer -->
+    <div id="footer-container"></div>
+
+    <script>
+        fetch('components/navbar.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('navbar-container').innerHTML = data;
+            });
+        
+        fetch('components/footer.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('footer-container').innerHTML = data;
+            });
+    </script>
+    <script src="js/main.js"></script>
+</body>
+</html> 

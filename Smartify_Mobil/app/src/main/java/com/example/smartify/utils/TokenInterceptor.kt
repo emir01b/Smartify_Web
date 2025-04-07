@@ -26,23 +26,29 @@ class TokenInterceptor @Inject constructor() : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
         
-        // Token alınması gereken istekler için (login ve register hariç)
-        if (!originalRequest.url.pathSegments.contains("login") && 
-            !originalRequest.url.pathSegments.contains("register")) {
-            
-            val token = runBlocking { 
-                sessionManager.getToken().first() 
+        try {
+            // Token alınması gereken istekler için (login ve register hariç)
+            if (!originalRequest.url.pathSegments.contains("login") && 
+                !originalRequest.url.pathSegments.contains("register")) {
+                
+                val token = runBlocking { 
+                    sessionManager.getToken().first() 
+                }
+                
+                if (!token.isNullOrEmpty()) {
+                    val newRequest = originalRequest.newBuilder()
+                        .header("Authorization", "Bearer $token")
+                        .build()
+                    return chain.proceed(newRequest)
+                }
             }
             
-            if (!token.isNullOrEmpty()) {
-                val newRequest = originalRequest.newBuilder()
-                    .header("Authorization", "Bearer $token")
-                    .build()
-                return chain.proceed(newRequest)
-            }
+            return chain.proceed(originalRequest)
+        } catch (e: Exception) {
+            // Hata durumunda orijinal isteği devam ettir ve hatayı logla
+            e.printStackTrace()
+            return chain.proceed(originalRequest)
         }
-        
-        return chain.proceed(originalRequest)
     }
 }
 

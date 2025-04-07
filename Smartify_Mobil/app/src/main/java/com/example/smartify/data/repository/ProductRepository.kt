@@ -7,6 +7,7 @@ import com.example.smartify.data.local.entities.toProduct
 import com.example.smartify.data.local.entities.toProductEntity
 import com.example.smartify.utils.NetworkResult
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import retrofit2.HttpException
 import java.io.IOException
@@ -18,67 +19,121 @@ class ProductRepository @Inject constructor(
     private val apiService: ApiService,
     private val productDao: ProductDao
 ) {
-    // Uzak sunucudan ürünleri getir
-    suspend fun fetchProducts(
+    // Tüm ürünleri getir
+    suspend fun getProducts(
         page: Int = 1,
-        limit: Int = 10,
+        limit: Int = 20,
         category: String? = null,
         search: String? = null,
         sort: String? = null,
         minPrice: Double? = null,
         maxPrice: Double? = null
-    ): NetworkResult<List<Product>> {
-        return try {
+    ): Flow<NetworkResult<List<Product>>> = flow {
+        emit(NetworkResult.Loading)
+        
+        try {
             val response = apiService.getProducts(page, limit, category, search, sort, minPrice, maxPrice)
             
-            if (response.isSuccessful && response.body()?.success == true) {
-                val products = response.body()?.data?.products ?: emptyList()
-                
-                // Ürünleri yerel veritabanına kaydet
-                productDao.insertProducts(products.map { it.toProductEntity() })
-                
-                NetworkResult.Success(products)
+            if (response.isSuccessful) {
+                val products = response.body()
+                if (products != null) {
+                    emit(NetworkResult.Success(products))
+                } else {
+                    emit(NetworkResult.Error("Ürünler getirilirken bir hata oluştu: Boş yanıt"))
+                }
             } else {
-                NetworkResult.Error(response.message() ?: "Ürünler getirilirken bir hata oluştu")
+                emit(NetworkResult.Error("Sunucu yanıt hatası: ${response.code()} ${response.message()}"))
             }
         } catch (e: IOException) {
-            NetworkResult.Error("İnternet bağlantınızı kontrol edin")
+            emit(NetworkResult.Error("İnternet bağlantınızı kontrol edin"))
         } catch (e: HttpException) {
-            NetworkResult.Error("Sunucu hatası: ${e.message}")
+            emit(NetworkResult.Error("Sunucu hatası: ${e.message}"))
         } catch (e: Exception) {
-            NetworkResult.Error("Bilinmeyen bir hata oluştu: ${e.message}")
+            emit(NetworkResult.Error("Bilinmeyen bir hata oluştu: ${e.message}"))
         }
     }
     
-    // Uzak sunucudan ürün detayı getir
-    suspend fun fetchProductById(id: String): NetworkResult<Product> {
-        return try {
-            val response = apiService.getProductById(id)
+    // Belirli bir ürünü getir (API)
+    suspend fun getProductById(productId: String): Flow<NetworkResult<Product>> = flow {
+        emit(NetworkResult.Loading)
+        
+        try {
+            val response = apiService.getProductById(productId)
             
-            if (response.isSuccessful && response.body()?.success == true) {
-                val product = response.body()?.data
+            if (response.isSuccessful) {
+                val product = response.body()
                 
                 if (product != null) {
-                    // Ürünü yerel veritabanına kaydet
-                    productDao.insertProduct(product.toProductEntity())
-                    NetworkResult.Success(product)
+                    emit(NetworkResult.Success(product))
                 } else {
-                    NetworkResult.Error("Ürün bulunamadı")
+                    emit(NetworkResult.Error("Ürün bulunamadı"))
                 }
             } else {
-                NetworkResult.Error(response.message() ?: "Ürün getirilirken bir hata oluştu")
+                emit(NetworkResult.Error("Sunucu yanıt hatası: ${response.code()} ${response.message()}"))
             }
         } catch (e: IOException) {
-            NetworkResult.Error("İnternet bağlantınızı kontrol edin")
+            emit(NetworkResult.Error("İnternet bağlantınızı kontrol edin"))
         } catch (e: HttpException) {
-            NetworkResult.Error("Sunucu hatası: ${e.message}")
+            emit(NetworkResult.Error("Sunucu hatası: ${e.message}"))
         } catch (e: Exception) {
-            NetworkResult.Error("Bilinmeyen bir hata oluştu: ${e.message}")
+            emit(NetworkResult.Error("Bilinmeyen bir hata oluştu: ${e.message}"))
+        }
+    }
+    
+    // Kategoriye göre ürünleri getir (API)
+    suspend fun getProductsByCategoryFromApi(category: String): Flow<NetworkResult<List<Product>>> = flow {
+        emit(NetworkResult.Loading)
+        
+        try {
+            val response = apiService.getProductsByCategory(category)
+            
+            if (response.isSuccessful) {
+                val products = response.body()
+                if (products != null) {
+                    emit(NetworkResult.Success(products))
+                } else {
+                    emit(NetworkResult.Error("Kategori ürünleri getirilirken bir hata oluştu: Boş yanıt"))
+                }
+            } else {
+                emit(NetworkResult.Error("Sunucu yanıt hatası: ${response.code()} ${response.message()}"))
+            }
+        } catch (e: IOException) {
+            emit(NetworkResult.Error("İnternet bağlantınızı kontrol edin"))
+        } catch (e: HttpException) {
+            emit(NetworkResult.Error("Sunucu hatası: ${e.message}"))
+        } catch (e: Exception) {
+            emit(NetworkResult.Error("Bilinmeyen bir hata oluştu: ${e.message}"))
+        }
+    }
+    
+    // Ürün ara (API)
+    suspend fun searchProductsFromApi(query: String): Flow<NetworkResult<List<Product>>> = flow {
+        emit(NetworkResult.Loading)
+        
+        try {
+            val response = apiService.searchProducts(query)
+            
+            if (response.isSuccessful) {
+                val products = response.body()
+                if (products != null) {
+                    emit(NetworkResult.Success(products))
+                } else {
+                    emit(NetworkResult.Error("Ürün araması yapılırken bir hata oluştu: Boş yanıt"))
+                }
+            } else {
+                emit(NetworkResult.Error("Sunucu yanıt hatası: ${response.code()} ${response.message()}"))
+            }
+        } catch (e: IOException) {
+            emit(NetworkResult.Error("İnternet bağlantınızı kontrol edin"))
+        } catch (e: HttpException) {
+            emit(NetworkResult.Error("Sunucu hatası: ${e.message}"))
+        } catch (e: Exception) {
+            emit(NetworkResult.Error("Bilinmeyen bir hata oluştu: ${e.message}"))
         }
     }
     
     // Yerel veritabanından tüm ürünleri getir
-    fun getProducts(): Flow<List<Product>> {
+    fun getAllProducts(): Flow<List<Product>> {
         return productDao.getAllProducts().map { entities ->
             entities.map { it.toProduct() }
         }
@@ -106,14 +161,14 @@ class ProductRepository @Inject constructor(
     }
     
     // Yerel veritabanından ürün detayı getir
-    fun getProductById(id: String): Flow<Product?> {
+    fun getProductByIdFromLocal(id: String): Flow<Product?> {
         return productDao.getProductById(id).map { entity ->
             entity?.toProduct()
         }
     }
     
     // Yerel veritabanında ürün ara
-    fun searchProducts(query: String): Flow<List<Product>> {
+    fun searchProductsFromLocal(query: String): Flow<List<Product>> {
         return productDao.searchProducts(query).map { entities ->
             entities.map { it.toProduct() }
         }

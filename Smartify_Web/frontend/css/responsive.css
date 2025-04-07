@@ -1,0 +1,432 @@
+/* Responsive Styles */
+
+/* Large Devices (Desktops) */
+@media (max-width: 1200px) {
+  .container {
+    max-width: 960px;
+  }
+  
+  .category-grid,
+  .product-grid,
+  .feature-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .footer-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Medium Devices (Tablets) */
+@media (max-width: 992px) {
+  .container {
+    max-width: 720px;
+  }
+  
+  .header-top {
+    flex-wrap: wrap;
+  }
+  
+  .logo {
+    margin-bottom: 15px;
+  }
+  
+  .nav-links {
+    order: 3;
+    width: 100%;
+    margin-top: 15px;
+    justify-content: center;
+  }
+  
+  .mega-menu-content {
+    flex-wrap: wrap;
+  }
+  
+  .mega-menu-column {
+    flex: 0 0 50%;
+    margin-bottom: 20px;
+  }
+  
+  .hero-content h2 {
+    font-size: 28px;
+  }
+  
+  .hero-content p {
+    font-size: 16px;
+  }
+  
+  .category-grid,
+  .product-grid,
+  .feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .newsletter-form {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .newsletter-form button {
+    width: 100%;
+  }
+  
+  .footer-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+  }
+}
+
+/* Small Devices (Mobile) */
+@media (max-width: 768px) {
+  .container {
+    max-width: 540px;
+  }
+  
+  .header-top {
+    justify-content: space-between;
+  }
+  
+  .nav-links {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background-color: var(--bg-color);
+    box-shadow: var(--box-shadow);
+    padding: 20px;
+    flex-direction: column;
+    gap: 15px;
+    z-index: 100;
+  }
+  
+  .nav-links.active {
+    display: flex;
+  }
+  
+  .mega-menu-content {
+    position: static;
+    box-shadow: none;
+    padding: 10px 0;
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    display: none;
+  }
+  
+  .mega-menu.active .mega-menu-content {
+    display: block;
+  }
+  
+  .mega-menu-column {
+    flex: 0 0 100%;
+    padding: 0;
+  }
+  
+  .mobile-menu-btn {
+    display: block;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+  }
+  
+  .hero-section {
+    height: 400px;
+  }
+  
+  .hero-content {
+    left: 20px;
+    max-width: 80%;
+  }
+  
+  .hero-content h2 {
+    font-size: 24px;
+  }
+  
+  .hero-content p {
+    font-size: 14px;
+  }
+  
+  .section-title h2 {
+    font-size: 24px;
+  }
+  
+  .category-grid,
+  .product-grid,
+  .feature-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .footer-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .notification {
+    width: calc(100% - 40px);
+  }
+}
+
+/* Extra Small Devices */
+@media (max-width: 576px) {
+  .container {
+    padding: 0 10px;
+  }
+  
+  .hero-section {
+    height: 350px;
+  }
+  
+  .hero-content {
+    left: 15px;
+    max-width: 90%;
+  }
+  
+  .hero-content h2 {
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+  
+  .hero-content p {
+    font-size: 14px;
+    margin-bottom: 15px;
+  }
+  
+  .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+  
+  .section-title h2 {
+    font-size: 20px;
+  }
+  
+  .section-title p {
+    font-size: 14px;
+  }
+  
+  .feature-card {
+    padding: 20px 15px;
+  }
+  
+  .newsletter-content h2 {
+    font-size: 24px;
+  }
+  
+  .newsletter-content p {
+    font-size: 14px;
+  }
+}
+
+/* Tablet (768px'e kadar) */
+@media screen and (max-width: 768px) {
+  .container {
+    padding: 0 1.5rem;
+  }
+
+  .nav-links {
+    display: none;
+  }
+
+  .mobile-menu-btn {
+    display: block;
+  }
+
+  .hero-content h1 {
+    font-size: 2.5rem;
+  }
+
+  .hero-buttons {
+    flex-direction: column;
+  }
+
+  .product-detail-container {
+    grid-template-columns: 1fr;
+  }
+
+  .cart-table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .newsletter form {
+    flex-direction: column;
+  }
+
+  .newsletter input {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Mobil (576px'e kadar) */
+@media screen and (max-width: 576px) {
+  header .container {
+    height: 60px;
+  }
+
+  .logo h1 {
+    font-size: 1.25rem;
+  }
+
+  .hero-content h1 {
+    font-size: 2rem;
+  }
+
+  .hero-content p {
+    font-size: 1rem;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+  }
+
+  .categories-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .social-links {
+    justify-content: center;
+  }
+
+  .auth-container {
+    margin: 0 1rem;
+  }
+
+  .social-buttons {
+    flex-direction: column;
+  }
+
+  .product-tabs .tabs-header {
+    flex-direction: column;
+  }
+
+  .tab-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* Mobil Menü */
+.mobile-menu {
+  display: none;
+  position: fixed;
+  top: 80px;
+  left: 0;
+  right: 0;
+  background-color: var(--white);
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-menu.active {
+  display: block;
+}
+
+.mobile-menu .nav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.mobile-menu .nav-links a {
+  display: block;
+  padding: 0.5rem 0;
+}
+
+/* Ürün Detay Sayfası Responsive */
+@media screen and (max-width: 992px) {
+  .product-detail-container {
+    grid-template-columns: 1fr;
+  }
+
+  .product-image {
+    max-width: 100%;
+    margin-bottom: 2rem;
+  }
+
+  .product-info {
+    padding: 0;
+  }
+}
+
+/* Sepet Sayfası Responsive */
+@media screen and (max-width: 768px) {
+  .cart-items {
+    overflow-x: auto;
+  }
+
+  .cart-table th,
+  .cart-table td {
+    min-width: 120px;
+  }
+
+  .cart-actions {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .coupon {
+    width: 100%;
+  }
+
+  .coupon input {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+}
+
+/* Giriş/Kayıt Sayfası Responsive */
+@media screen and (max-width: 576px) {
+  .auth-container {
+    border-radius: 0;
+  }
+
+  .auth-content {
+    padding: 1.5rem;
+  }
+
+  .social-buttons {
+    flex-direction: column;
+  }
+
+  .social-btn {
+    width: 100%;
+  }
+}
+
+/* Ürün Grid Responsive */
+@media screen and (max-width: 480px) {
+  .products-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .product-card {
+    max-width: 100%;
+  }
+}
+
+/* Filtreler Responsive */
+@media screen and (max-width: 768px) {
+  .products-container {
+    flex-direction: column;
+  }
+
+  .filters {
+    width: 100%;
+    margin-bottom: 2rem;
+  }
+
+  .filter-group {
+    margin-bottom: 1.5rem;
+  }
+} 
