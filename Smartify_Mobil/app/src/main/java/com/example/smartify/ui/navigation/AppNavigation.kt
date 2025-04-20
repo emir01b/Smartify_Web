@@ -7,10 +7,14 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.example.smartify.ui.screens.cart.CartScreen
 import com.example.smartify.ui.screens.home.HomeScreen
 import com.example.smartify.ui.screens.login.LoginScreen
+import com.example.smartify.ui.screens.profile.ProfileScreen
 import com.example.smartify.ui.screens.register.RegisterScreen
+import com.example.smartify.ui.screens.search.SearchScreen
 import com.example.smartify.ui.screens.splash.SplashScreen
+import com.example.smartify.ui.screens.wishlist.WishlistScreen
 import com.example.smartify.utils.Constants
 
 @Composable
@@ -20,7 +24,7 @@ fun AppNavigation(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Constants.Routes.SPLASH,
+        startDestination = Constants.Routes.HOME,
         modifier = modifier
     ) {
         // Splash Screen
@@ -75,6 +79,48 @@ fun AppNavigation(
             )
         }
         
+        // Search Screen
+        composable(Constants.Routes.SEARCH) {
+            SearchScreen(
+                onNavigateToProductDetail = { productId ->
+                    navController.navigate(Constants.Routes.PRODUCT_DETAIL.replace("{productId}", productId))
+                }
+            )
+        }
+        
+        // Profile Screen
+        composable(Constants.Routes.PROFILE) {
+            ProfileScreen(
+                onNavigateToOrders = { navController.navigate(Constants.Routes.ORDERS) },
+                onNavigateToWishlist = { navController.navigate(Constants.Routes.WISHLIST) },
+                onNavigateToAddresses = { },  // Henüz adresler sayfası yok
+                onNavigateToSettings = { },  // Henüz ayarlar sayfası yok
+                onNavigateToLogin = {
+                    navController.navigate(Constants.Routes.LOGIN) {
+                        popUpTo(Constants.Routes.HOME) { inclusive = true }
+                    }
+                }
+            )
+        }
+        
+        // Cart Screen
+        composable(Constants.Routes.CART) {
+            CartScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToCheckout = { navController.navigate(Constants.Routes.CHECKOUT) }
+            )
+        }
+        
+        // Wishlist Screen
+        composable(Constants.Routes.WISHLIST) {
+            WishlistScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToProductDetail = { productId ->
+                    navController.navigate(Constants.Routes.PRODUCT_DETAIL.replace("{productId}", productId))
+                }
+            )
+        }
+        
         // Product Detail Screen
         composable(
             route = Constants.Routes.PRODUCT_DETAIL,
@@ -89,37 +135,6 @@ fun AppNavigation(
             //     productId = productId,
             //     onNavigateBack = { navController.popBackStack() },
             //     onNavigateToCart = { navController.navigate(Constants.Routes.CART) }
-            // )
-        }
-        
-        // Cart Screen
-        composable(Constants.Routes.CART) {
-            // CartScreen(
-            //     onNavigateBack = { navController.popBackStack() },
-            //     onNavigateToCheckout = { navController.navigate(Constants.Routes.CHECKOUT) }
-            // )
-        }
-        
-        // Wishlist Screen
-        composable(Constants.Routes.WISHLIST) {
-            // WishlistScreen(
-            //     onNavigateBack = { navController.popBackStack() },
-            //     onNavigateToProductDetail = { productId ->
-            //         navController.navigate(Constants.Routes.PRODUCT_DETAIL.replace("{productId}", productId))
-            //     }
-            // )
-        }
-        
-        // Profile Screen
-        composable(Constants.Routes.PROFILE) {
-            // ProfileScreen(
-            //     onNavigateBack = { navController.popBackStack() },
-            //     onNavigateToOrders = { navController.navigate(Constants.Routes.ORDERS) },
-            //     onNavigateToLogin = {
-            //         navController.navigate(Constants.Routes.LOGIN) {
-            //             popUpTo(Constants.Routes.HOME) { inclusive = true }
-            //         }
-            //     }
             // )
         }
         

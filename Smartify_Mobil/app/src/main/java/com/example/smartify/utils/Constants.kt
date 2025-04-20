@@ -18,6 +18,7 @@ object Constants {
         const val LOGIN = "login"
         const val REGISTER = "register"
         const val HOME = "home"
+        const val SEARCH = "search"
         const val PRODUCT_DETAIL = "product_detail/{productId}"
         const val CART = "cart"
         const val WISHLIST = "wishlist"
