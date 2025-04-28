@@ -4,6 +4,18 @@ import com.example.smartify.api.models.*
 import retrofit2.Response
 import retrofit2.http.*
 
+const val BASE_URL = "http://10.0.2.2:3000/"
+const val IMAGE_BASE_URL = "${BASE_URL}uploads/"
+
+// Resim URL'lerini düzenlemek için extension function
+fun String.toFullImageUrl(): String {
+    return when {
+        this.startsWith("/uploads/") -> BASE_URL + this.removePrefix("/")
+        this.startsWith("http://") || this.startsWith("https://") -> this
+        else -> IMAGE_BASE_URL + this
+    }
+}
+
 interface ApiService {
     // Ürünlerle İlgili Endpoint'ler
     @GET("api/products")

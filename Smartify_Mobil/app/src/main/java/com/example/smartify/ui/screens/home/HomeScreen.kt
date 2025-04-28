@@ -3,6 +3,9 @@ package com.example.smartify.ui.screens.home
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -41,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,6 +67,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.smartify.R
 import com.example.smartify.api.models.Product
+import com.example.smartify.api.toFullImageUrl
+import kotlinx.coroutines.delay
 
 @Composable
 fun HomeScreen(
@@ -281,95 +288,127 @@ fun FeaturedProductsRow(
     products: List<Product>,
     onProductClick: (String) -> Unit
 ) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        items(products) { product ->
-            FeaturedProductCard(product = product, onClick = { onProductClick(product.id) })
-        }
-    }
-}
-
-@Composable
-fun FeaturedProductCard(product: Product, onClick: () -> Unit) {
-    Card(
+    var currentPage by remember { mutableStateOf(0) }
+    var offsetX by remember { mutableStateOf(0f) }
+    
+    Box(
         modifier = Modifier
-            .width(180.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            .fillMaxWidth()
+            .height(250.dp)
+            .padding(horizontal = 16.dp)
+            .draggable(
+                orientation = Orientation.Horizontal,
+                state = rememberDraggableState { delta ->
+                    offsetX += delta
+                },
+                onDragStarted = { offsetX = 0f },
+                onDragStopped = {
+                    when {
+                        offsetX > 30 -> {
+                            currentPage = if (currentPage > 0) currentPage - 1 else products.size - 1
+                        }
+                        offsetX < -30 -> {
+                            currentPage = (currentPage + 1) % products.size
+                        }
+                    }
+                    offsetX = 0f
+                }
+            )
     ) {
-        Column {
-            Box(modifier = Modifier.height(150.dp)) {
-                // Görsel, API'den alınacak
-                val imageUrl = if (product.images.isNotEmpty()) product.images.first() else ""
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(imageUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = product.name,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp),
-                    contentScale = ContentScale.Crop,
-                    error = painterResource(id = R.drawable.ic_logo) // Hata durumunda gösterilecek placeholder
-                )
-                
+        Card(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable { onProductClick(products[currentPage].id) },
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                // Sol taraf - Ürün Görseli
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)),
-                    contentAlignment = Alignment.Center
+                        .weight(1f)
+                        .fillMaxHeight()
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.FavoriteBorder,
-                        contentDescription = "Favorilere Ekle",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-            
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = product.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "${product.price} ₺",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(products[currentPage].images.firstOrNull()?.toFullImageUrl())
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = products[currentPage].name,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop,
+                        error = painterResource(id = R.drawable.ic_logo)
                     )
                 }
                 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.width(16.dp))
                 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = null,
-                        tint = Color(0xFFFFC107),
-                        modifier = Modifier.size(16.dp)
-                    )
+                // Sağ taraf - Ürün Bilgileri
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = products[currentPage].name,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Text(
+                            text = "${products[currentPage].price} ₺",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Text(
+                            text = products[currentPage].description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     
-                    Spacer(modifier = Modifier.width(4.dp))
-                    
-                    Text(
-                        text = "4.5", // Sabit değer kullanıyoruz çünkü Product'ta rating yok
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    // Sayfa göstergesi
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        products.forEachIndexed { index, _ ->
+                            Box(
+                                modifier = Modifier
+                                    .padding(4.dp)
+                                    .size(12.dp) // Noktaları büyüttüm
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (currentPage == index)
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.9f) // Aktif noktanın opaklığını artırdım
+                                        else
+                                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) // Pasif noktaların rengini ve opaklığını ayarladım
+                                    )
+                                    .clickable { currentPage = index }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -404,8 +443,7 @@ fun ProductCard(product: Product, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            // Görsel, API'den alınacak
-            val imageUrl = if (product.images.isNotEmpty()) product.images.first() else ""
+            val imageUrl = product.images.firstOrNull()?.toFullImageUrl()
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(imageUrl)
@@ -416,7 +454,7 @@ fun ProductCard(product: Product, onClick: () -> Unit) {
                     .fillMaxWidth()
                     .height(120.dp),
                 contentScale = ContentScale.Crop,
-                error = painterResource(id = R.drawable.ic_logo) // Hata durumunda gösterilecek placeholder
+                error = painterResource(id = R.drawable.ic_logo)
             )
             
             Column(modifier = Modifier.padding(12.dp)) {
