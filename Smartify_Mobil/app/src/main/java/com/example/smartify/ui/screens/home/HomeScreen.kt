@@ -128,15 +128,6 @@ fun HomeScreen(
                 )
             )
             
-            // Kategoriler
-            CategoriesSection(
-                categories = state.categories,
-                selectedCategory = state.selectedCategory,
-                onCategorySelected = { category ->
-                    viewModel.getProductsByCategory(category)
-                }
-            )
-            
             // Yükleniyor durumu
             if (state.isLoading) {
                 Box(
@@ -230,56 +221,6 @@ fun HomeScreen(
                 )
             }
         }
-    }
-}
-
-@Composable
-fun CategoriesSection(
-    categories: List<String>,
-    selectedCategory: String,
-    onCategorySelected: (String) -> Unit
-) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(categories) { category ->
-            CategoryChip(
-                category = category,
-                isSelected = category == selectedCategory,
-                onSelected = { onCategorySelected(category) }
-            )
-        }
-    }
-}
-
-@Composable
-fun CategoryChip(
-    category: String,
-    isSelected: Boolean,
-    onSelected: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .padding(vertical = 8.dp)
-            .clickable(onClick = onSelected),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) 
-                MaterialTheme.colorScheme.primary 
-            else 
-                MaterialTheme.colorScheme.primaryContainer
-        )
-    ) {
-        Text(
-            text = category,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            color = if (isSelected) 
-                MaterialTheme.colorScheme.onPrimary 
-            else 
-                MaterialTheme.colorScheme.onPrimaryContainer,
-            style = MaterialTheme.typography.labelLarge
-        )
     }
 }
 

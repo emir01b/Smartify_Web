@@ -126,8 +126,53 @@ function displayPopularProducts(products) {
 
 // Sepete ürün ekle
 function addToCart(productId) {
-    console.log(`Ürün ID: ${productId} sepete eklendi`);
-    showNotification('Ürün sepete eklendi', 'success');
+    console.log(`Ürün ID: ${productId} sepete ekleniyor...`);
+    
+    // Ürün bilgilerini al
+    fetch(`http://localhost:3000/api/products/${productId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Ürün bilgileri alınamadı');
+            }
+            return response.json();
+        })
+        .then(product => {
+            // cart nesnesi varsa onu kullan, yoksa window.cart'ı kontrol et
+            if (typeof cart !== 'undefined') {
+                cart.addItem(product);
+            } else if (typeof window.cart !== 'undefined') {
+                window.cart.addItem(product);
+            } else {
+                // Cart nesnesi bulunamadı, ürünü localStorage'a ekle
+                const cartItems = JSON.parse(localStorage.getItem('cart')) || [];
+                
+                // Ürünün zaten sepette olup olmadığını kontrol et
+                const existingItemIndex = cartItems.findIndex(item => item._id === product._id);
+                
+                if (existingItemIndex !== -1) {
+                    // Ürün zaten sepette, miktarını artır
+                    cartItems[existingItemIndex].quantity += 1;
+                } else {
+                    // Ürünü sepete ekle
+                    product.quantity = 1;
+                    cartItems.push(product);
+                }
+                
+                // Sepeti güncelle
+                localStorage.setItem('cart', JSON.stringify(cartItems));
+                
+                // Header'ı güncelle
+                if (typeof updateHeader === 'function') {
+                    updateHeader();
+                }
+                
+                window.showToast(`${product.name} sepete eklendi`, 'success', true);
+            }
+        })
+        .catch(error => {
+            console.error('Sepete ekleme hatası:', error);
+            window.showToast('Ürün sepete eklenirken bir hata oluştu', 'error');
+        });
 }
 
 // Favorilere ekle/çıkar

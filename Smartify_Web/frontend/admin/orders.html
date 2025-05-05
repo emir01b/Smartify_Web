@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Tech Admin - Siparişler</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>3D Tech</h1>
+                <p>Admin Panel</p>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="/admin/dashboard.html">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="/admin/orders.html">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span>Siparişler</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin/products.html">
+                            <i class="fas fa-box"></i>
+                            <span>Ürünler</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="adminLogout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Çıkış Yap</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="admin-header">
+                <h1>Siparişler</h1>
+                <div class="admin-user">
+                    <div class="user-info">
+                        <span class="user-name">Admin</span>
+                        <span class="user-role">Yönetici</span>
+                    </div>
+                    <div class="user-avatar">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Orders Content -->
+            <div class="orders-content">
+                <!-- Filters -->
+                <div class="admin-filters">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="orderSearch" placeholder="Sipariş ara...">
+                    </div>
+                    <div class="filter-group">
+                        <select id="statusFilter" class="form-select">
+                            <option value="">Tüm Durumlar</option>
+                            <option value="Beklemede">Beklemede</option>
+                            <option value="İşleme Alındı">İşleme Alındı</option>
+                            <option value="Kargoya Verildi">Kargoya Verildi</option>
+                            <option value="Teslim Edildi">Teslim Edildi</option>
+                            <option value="İptal Edildi">İptal Edildi</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <select id="paymentFilter" class="form-select">
+                            <option value="">Tüm Ödemeler</option>
+                            <option value="paid">Ödendi</option>
+                            <option value="unpaid">Ödenmedi</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Orders Table -->
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Sipariş ID</th>
+                                <th>Müşteri</th>
+                                <th>Tarih</th>
+                                <th>Tutar</th>
+                                <th>Ödeme</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody">
+                            <tr>
+                                <td colspan="7" class="loading">Siparişler yükleniyor...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination" id="ordersPagination">
+                    <!-- Sayfalama buraya gelecek -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Order Detail Modal -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-shopping-cart"></i> Sipariş Detayı</h2>
+                <button class="modal-close" id="closeOrderModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="order-details">
+                    <div class="order-info-header">
+                        <div>
+                            <h3>Sipariş #<span id="orderIdDetail"></span></h3>
+                            <p>Tarih: <span id="orderDateDetail"></span></p>
+                        </div>
+                        <div class="order-status">
+                            <span id="orderStatusBadge" class="status-badge"></span>
+                        </div>
+                    </div>
+
+                    <div class="order-info-grid">
+                        <div class="order-info-section">
+                            <h4>Müşteri Bilgileri</h4>
+                            <p><strong>Ad Soyad:</strong> <span id="customerNameDetail"></span></p>
+                            <p><strong>E-posta:</strong> <span id="customerEmailDetail"></span></p>
+                            <p><strong>Telefon:</strong> <span id="customerPhoneDetail"></span></p>
+                        </div>
+
+                        <div class="order-info-section">
+                            <h4>Teslimat Adresi</h4>
+                            <p id="shippingAddressDetail"></p>
+                        </div>
+
+                        <div class="order-info-section">
+                            <h4>Ödeme Bilgileri</h4>
+                            <p><strong>Ödeme Yöntemi:</strong> <span id="paymentMethodDetail"></span></p>
+                            <p><strong>Ödeme Durumu:</strong> <span id="paymentStatusDetail"></span></p>
+                            <p id="paidAtDetail"></p>
+                        </div>
+
+                        <div class="order-info-section">
+                            <h4>Sipariş Notları</h4>
+                            <textarea id="orderNotesDetail" class="form-input" placeholder="Sipariş ile ilgili notlar..."></textarea>
+                            <button id="saveNotesBtn" class="btn btn-primary btn-sm">Notları Kaydet</button>
+                        </div>
+                    </div>
+
+                    <div class="order-items">
+                        <h4>Sipariş Öğeleri</h4>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Ürün</th>
+                                    <th>Fiyat</th>
+                                    <th>Adet</th>
+                                    <th>Toplam</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orderItemsDetail">
+                                <!-- Sipariş öğeleri buraya gelecek -->
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="text-right"><strong>Ara Toplam:</strong></td>
+                                    <td id="subtotalDetail"></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-right"><strong>KDV:</strong></td>
+                                    <td id="taxDetail"></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-right"><strong>Kargo:</strong></td>
+                                    <td id="shippingDetail"></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-right"><strong>Toplam:</strong></td>
+                                    <td id="totalDetail"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <div class="order-actions">
+                        <h4>Sipariş İşlemleri</h4>
+                        <div class="action-buttons">
+                            <select id="orderStatusUpdate" class="form-select">
+                                <option value="Beklemede">Beklemede</option>
+                                <option value="İşleme Alındı">İşleme Alındı</option>
+                                <option value="Kargoya Verildi">Kargoya Verildi</option>
+                                <option value="Teslim Edildi">Teslim Edildi</option>
+                                <option value="İptal Edildi">İptal Edildi</option>
+                            </select>
+                            <button id="updateStatusBtn" class="btn btn-primary">Durumu Güncelle</button>
+                            <button id="markAsPaidBtn" class="btn btn-success">Ödendi İşaretle</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/admin/admin.js"></script>
+    <script src="../js/admin/orders.js"></script>
+</body>
+</html> 

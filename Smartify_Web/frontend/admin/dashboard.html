@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Tech Admin - Dashboard</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>3D Tech</h1>
+                <p>Admin Panel</p>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="active">
+                        <a href="/admin/dashboard.html">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin/orders.html">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span>Siparişler</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin/products.html">
+                            <i class="fas fa-box"></i>
+                            <span>Ürünler</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="adminLogout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Çıkış Yap</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="admin-header">
+                <h1>Dashboard</h1>
+                <div class="admin-user">
+                    <div class="user-info">
+                        <span class="user-name">Admin</span>
+                        <span class="user-role">Yönetici</span>
+                    </div>
+                    <div class="user-avatar">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <div class="dashboard-content">
+                <!-- Summary Cards -->
+                <div class="summary-cards">
+                    <div class="summary-card">
+                        <div class="summary-icon orders">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="summary-details">
+                            <h3>Toplam Sipariş</h3>
+                            <p id="totalOrders">Yükleniyor...</p>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon revenue">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <div class="summary-details">
+                            <h3>Toplam Gelir</h3>
+                            <p id="totalRevenue">Yükleniyor...</p>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon pending">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="summary-details">
+                            <h3>Bekleyen Siparişler</h3>
+                            <p id="pendingOrders">Yükleniyor...</p>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon completed">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="summary-details">
+                            <h3>Tamamlanan Siparişler</h3>
+                            <p id="completedOrders">Yükleniyor...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="dashboard-charts">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h2>Sipariş Dağılımı</h2>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="orderStatusChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h2>Ödeme Yöntemleri</h2>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="paymentMethodChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Orders -->
+                <div class="recent-orders">
+                    <div class="section-header">
+                        <h2>Son Siparişler</h2>
+                        <a href="/admin/orders.html" class="btn btn-sm">Tümünü Gör</a>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Sipariş ID</th>
+                                    <th>Müşteri</th>
+                                    <th>Tarih</th>
+                                    <th>Tutar</th>
+                                    <th>Ödeme</th>
+                                    <th>Durum</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentOrdersTable">
+                                <tr>
+                                    <td colspan="7" class="loading">Yükleniyor...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/admin/admin.js"></script>
+    <script src="../js/admin/dashboard.js"></script>
+</body>
+</html> 

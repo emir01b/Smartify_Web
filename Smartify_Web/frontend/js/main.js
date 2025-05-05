@@ -1,59 +1,5 @@
-// API URL'si
+// API URL
 const API_URL = 'http://localhost:3000/api';
-
-// Token işlemleri
-const getToken = () => localStorage.getItem('token');
-const setToken = (token) => localStorage.setItem('token', token);
-const removeToken = () => localStorage.removeItem('token');
-
-// Kullanıcı işlemleri
-const getCurrentUser = () => JSON.parse(localStorage.getItem('user'));
-const setCurrentUser = (user) => localStorage.setItem('user', JSON.stringify(user));
-const removeCurrentUser = () => localStorage.removeItem('user');
-
-// Header işlemleri
-const updateHeader = () => {
-  const user = getCurrentUser();
-  const cartCount = document.querySelector('.cart-count');
-  const cart = JSON.parse(localStorage.getItem('cart')) || [];
-  
-  if (cartCount) {
-    cartCount.textContent = cart.reduce((total, item) => total + item.quantity, 0);
-  }
-
-  if (user) {
-    const navIcons = document.querySelector('.nav-icons');
-    if (navIcons) {
-      navIcons.innerHTML = `
-        <a href="search.html" class="icon-link"><i class="fas fa-search"></i></a>
-        <a href="cart.html" class="icon-link"><i class="fas fa-shopping-cart"></i><span class="cart-count">0</span></a>
-        <div class="dropdown">
-          <button class="dropdown-toggle">
-            <i class="fas fa-user"></i>
-            <span>${user.name}</span>
-          </button>
-          <div class="dropdown-menu">
-            <a href="account.html">Hesabım</a>
-            <a href="orders.html">Siparişlerim</a>
-            <a href="#" id="logout-btn">Çıkış Yap</a>
-          </div>
-        </div>
-      `;
-      
-      document.getElementById('logout-btn').addEventListener('click', (e) => {
-        e.preventDefault();
-        logout();
-      });
-    }
-  }
-};
-
-// Çıkış işlemi
-const logout = () => {
-  removeToken();
-  removeCurrentUser();
-  window.location.href = 'index.html';
-};
 
 // API istekleri için yardımcı fonksiyon
 const fetchAPI = async (endpoint, options = {}) => {
@@ -209,6 +155,13 @@ document.addEventListener('DOMContentLoaded', function() {
           mobileMenuBtn.classList.remove('active');
         }
       }
+      
+      // Close all mega menus when clicking outside
+      megaMenuItems.forEach(item => {
+        if (item.classList.contains('active') && !item.contains(e.target)) {
+          item.classList.remove('active');
+        }
+      });
     }
   });
   
@@ -273,11 +226,16 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
   });
+  
+  // Kullanıcı bilgilerini güncelle
+  updateHeader();
+  
+  // Ana script yüklendiğini bildir
+  window.dispatchEvent(new Event('main_js_loaded'));
 });
 
 // Sayfa yüklendiğinde çalışacak fonksiyonlar
 document.addEventListener('DOMContentLoaded', () => {
-  updateHeader();
   initMobileMenu();
   initScrollAnimations();
 
@@ -487,4 +445,213 @@ function setupNavbar() {
       });
     }
   });
+}
+
+// Elemanları seç
+const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+const mainNav = document.querySelector('.main-nav');
+const megaMenuItems = document.querySelectorAll('.mega-menu');
+const userAccountSection = document.getElementById('user-account-section');
+
+// Mobil menü için toggle fonksiyonu
+if (mobileMenuBtn) {
+  mobileMenuBtn.addEventListener('click', () => {
+    mainNav.classList.toggle('active');
+    // Menü açıldığında tüm mega menü dropdown'larını kapat
+    megaMenuItems.forEach(item => {
+      item.classList.remove('active');
+    });
+  });
+}
+
+// Mobil görünümde mega menülerin tıklanabilir olması
+if (window.innerWidth <= 768) {
+  megaMenuItems.forEach(item => {
+    const link = item.querySelector('a');
+    link.addEventListener('click', function(e) {
+      if (window.innerWidth <= 768) {
+        e.preventDefault();
+        item.classList.toggle('active');
+        
+        // Diğer mega menü dropdown'larını kapat
+        megaMenuItems.forEach(otherItem => {
+          if (otherItem !== item) {
+            otherItem.classList.remove('active');
+          }
+        });
+      }
+    });
+  });
+}
+
+// Local storage ve kullanıcı işlemleri
+const getToken = () => {
+  return localStorage.getItem('token');
+};
+
+const setToken = (token) => {
+  localStorage.setItem('token', token);
+};
+
+const removeToken = () => {
+  localStorage.removeItem('token');
+};
+
+const getCurrentUser = () => {
+  const userJSON = localStorage.getItem('user');
+  return userJSON ? JSON.parse(userJSON) : null;
+};
+
+const setCurrentUser = (user) => {
+  localStorage.setItem('user', JSON.stringify(user));
+};
+
+const removeCurrentUser = () => {
+  localStorage.removeItem('user');
+};
+
+// Kullanıcı oturum durumuna göre header'ı güncelle
+const updateHeader = () => {
+  const user = getCurrentUser();
+  const cartCount = document.querySelector('.cart-count');
+  const cart = JSON.parse(localStorage.getItem('cart')) || [];
+  
+  if (cartCount) {
+    cartCount.textContent = cart.reduce((total, item) => total + item.quantity, 0);
+  }
+
+  // Kullanıcı hesap bölümünü güncelle
+  const userAccountSection = document.getElementById('user-account-section');
+  if (userAccountSection) {
+    if (user) {
+      console.log("Kullanıcı giriş yapmış:", user); // Debug için eklendi
+      // Kullanıcı giriş yapmışsa, kullanıcı menüsünü göster
+      userAccountSection.innerHTML = `
+        <div class="user-menu">
+          <button type="button" class="user-menu-button">
+            <i class="fas fa-user-circle"></i>
+            <span class="username">${user.name}</span>
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="user-menu-dropdown">
+            <a href="account.html"><i class="fas fa-user"></i> Hesabım</a>
+            <a href="account.html#orders"><i class="fas fa-box"></i> Siparişlerim</a>
+            <a href="account.html#address"><i class="fas fa-map-marker-alt"></i> Adreslerim</a>
+            <a href="wishlist.html"><i class="fas fa-heart"></i> Favorilerim</a>
+            <a href="#" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Çıkış Yap</a>
+          </div>
+        </div>
+      `;
+      
+      // Kullanıcı menüsü aç/kapa
+      const userMenuButton = userAccountSection.querySelector('.user-menu-button');
+      const userMenu = userAccountSection.querySelector('.user-menu');
+      
+      userMenuButton.addEventListener('click', () => {
+        userMenu.classList.toggle('active');
+      });
+      
+      // Menü dışına tıklandığında menüyü kapat
+      document.addEventListener('click', (e) => {
+        if (userMenu && !userMenu.contains(e.target)) {
+          userMenu.classList.remove('active');
+        }
+      });
+      
+      // Çıkış butonuna tıklama
+      const logoutBtn = document.getElementById('logout-btn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          logout();
+        });
+      }
+    } else {
+      console.log("Kullanıcı giriş yapmamış"); // Debug için eklendi
+      // Kullanıcı giriş yapmamışsa, sadece giriş butonunu göster
+      userAccountSection.innerHTML = `
+        <div class="auth-buttons">
+          <a href="login.html" class="login-btn">
+            <i class="fas fa-sign-in-alt"></i> Giriş Yap
+          </a>
+        </div>
+      `;
+    }
+  }
+};
+
+// Çıkış yapma
+const logout = () => {
+  removeToken();
+  removeCurrentUser();
+  window.location.href = 'index.html';
+};
+
+// API isteği yapma (GET)
+const fetchData = async (endpoint, options = {}) => {
+  try {
+    const token = getToken();
+    
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+        ...(options.headers || {})
+      }
+    });
+    
+    const data = await response.json();
+    
+    // Token süresi dolduysa otomatik çıkış yap
+    if (response.status === 401 && data.message === 'Token süresi doldu') {
+      logout();
+      window.location.href = 'login.html?expired=true';
+      return null;
+    }
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Bir hata oluştu');
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('API Hatası:', error);
+    throw error;
+  }
+};
+
+// Sayfa yüklendiğinde
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('Main.js DOMContentLoaded çalıştı');
+  // Token ve kullanıcı kontrolü
+  const token = localStorage.getItem('token');
+  const user = localStorage.getItem('user');
+  console.log('Token:', token);
+  console.log('User:', user);
+  
+  // Header'ı güncelle
+  updateHeader();
+  
+  // Ana script yüklendiğini bildir
+  window.dispatchEvent(new Event('main_js_loaded'));
+  
+  // API URL'i window nesnesine aktar
+  window.API_URL = API_URL;
+});
+
+// Window nesnesi üzerinde fonksiyonları tanımla
+window.getToken = getToken;
+window.setToken = setToken;
+window.removeToken = removeToken;
+window.getCurrentUser = getCurrentUser;
+window.setCurrentUser = setCurrentUser;
+window.removeCurrentUser = removeCurrentUser;
+window.updateHeader = updateHeader;
+window.logout = logout;
+window.fetchData = fetchData;
+
+// Sayfa cart.js'yi içeriyorsa cart nesnesini global yap
+if (typeof cart !== 'undefined') {
+  window.cart = cart;
 } 

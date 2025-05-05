@@ -76,17 +76,22 @@
   <div id="footer-container"></div>
 
   <script>
-    fetch('components/navbar.html')
-      .then(response => response.text())
-      .then(data => {
-        document.getElementById('navbar-container').innerHTML = data;
+    document.addEventListener('DOMContentLoaded', function() {
+      // Önce navbar ve footer bileşenlerini yükle
+      Promise.all([
+        fetch('components/navbar.html').then(response => response.text()),
+        fetch('components/footer.html').then(response => response.text())
+      ]).then(([navbarData, footerData]) => {
+        document.getElementById('navbar-container').innerHTML = navbarData;
+        document.getElementById('footer-container').innerHTML = footerData;
+        
+        // Bileşenler yüklendikten sonra main.js yüklendiğini bildir
+        if (typeof updateHeader === 'function') {
+          updateHeader();
+          window.dispatchEvent(new Event('main_js_loaded'));
+        }
       });
-      
-    fetch('components/footer.html')
-      .then(response => response.text())
-      .then(data => {
-        document.getElementById('footer-container').innerHTML = data;
-      });
+    });
   </script>
   <script src="js/main.js"></script>
   <script src="js/products.js"></script>

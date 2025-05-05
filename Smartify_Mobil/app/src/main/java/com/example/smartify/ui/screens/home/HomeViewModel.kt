@@ -23,7 +23,6 @@ class HomeViewModel @Inject constructor(
     val state: State<HomeScreenState> = _state
 
     private var getProductsJob: Job? = null
-    private var getProductsByCategoryJob: Job? = null
 
     init {
         getProducts()
@@ -52,51 +51,7 @@ class HomeViewModel @Inject constructor(
                                 products = productsList,
                                 featuredProducts = featuredProductsList,
                                 isLoading = false,
-                                error = null,
-                                selectedCategory = "Tüm Ürünler"
-                            )
-                        }
-                        is NetworkResult.Error -> {
-                            _state.value = state.value.copy(
-                                isLoading = false,
-                                error = result.message
-                            )
-                        }
-                    }
-                }.launchIn(this)
-            } catch (e: Exception) {
-                _state.value = state.value.copy(
-                    isLoading = false,
-                    error = "Beklenmeyen bir hata oluştu: ${e.message}"
-                )
-            }
-        }
-    }
-
-    // Kategoriye göre ürünleri getir
-    fun getProductsByCategory(category: String) {
-        if (category == "Tüm Ürünler") {
-            getProducts()
-            return
-        }
-
-        getProductsByCategoryJob?.cancel()
-        getProductsByCategoryJob = viewModelScope.launch {
-            try {
-                productRepository.getProductsByCategoryFromApi(category).onEach { result ->
-                    when (result) {
-                        is NetworkResult.Loading -> {
-                            _state.value = state.value.copy(
-                                isLoading = true,
                                 error = null
-                            )
-                        }
-                        is NetworkResult.Success -> {
-                            _state.value = state.value.copy(
-                                products = result.data,
-                                isLoading = false,
-                                error = null,
-                                selectedCategory = category
                             )
                         }
                         is NetworkResult.Error -> {
@@ -166,15 +121,6 @@ class HomeViewModel @Inject constructor(
 data class HomeScreenState(
     val products: List<Product> = emptyList(),
     val featuredProducts: List<Product> = emptyList(),
-    val categories: List<String> = listOf(
-        "Tüm Ürünler",
-        "3D Yazıcılar",
-        "Akıllı Ev",
-        "3D Modeller",
-        "Sensörler",
-        "Aksesuarlar"
-    ),
-    val selectedCategory: String = "Tüm Ürünler",
     val isLoading: Boolean = false,
     val error: String? = null
 ) 

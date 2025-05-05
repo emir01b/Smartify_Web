@@ -29,38 +29,6 @@
       </div>
     </section>
 
-    <!-- Categories Section -->
-    <section class="category-section">
-      <div class="container">
-        <div class="section-title">
-          <h2>Kategoriler</h2>
-          <p>İhtiyacınız olan tüm teknoloji ürünleri</p>
-        </div>
-        <div class="category-grid">
-          <a href="products.html?category=Elektronik" class="category-card">
-            <img src="/images/elektronik.png" alt="Elektronik">
-            <div class="category-card-content">
-              <h3>Elektronik</h3>
-              <p>Projeleriniz için gerekli tüm komponentler</p>
-            </div>
-          </a>
-          <a href="products.html?category=Akıllı Ev" class="category-card">
-            <img src="/images/AkıllıEv.jpg" alt="Akıllı Ev">
-            <div class="category-card-content">
-              <h3>Akıllı Ev</h3>
-              <p>Evinizi teknoloji ile donatın</p>
-            </div>
-          </a>
-          <a href="products.html?category=Yedek Parçalar" class="category-card">
-            <img src="https://www.evofone.com/UPLOAD/URUNLER/creality-sprite-extruder-pro-1.jpg" alt="Yedek Parçalar">
-            <div class="category-card-content">
-              <h3>Yedek Parçalar</h3>
-              <p>Cihazlarınız için gerekli tüm parçalar</p>
-            </div>
-          </a>
-        </div>
-      </div>
-    </section>
 
     <!-- Featured Products Section -->
     <section class="product-section">
@@ -115,36 +83,26 @@
       </div>
     </section>
 
-    <!-- Newsletter Section -->
-    <section class="newsletter-section">
-      <div class="container">
-        <div class="newsletter-content">
-          <h2>Bültenimize Abone Olun</h2>
-          <p>Yeni ürünler, indirimler ve kampanyalardan haberdar olmak için e-posta listemize kaydolun.</p>
-          <form class="newsletter-form">
-            <input type="email" placeholder="E-posta adresiniz" required>
-            <button type="submit">Abone Ol</button>
-          </form>
-        </div>
-      </div>
-    </section>
-  </main>
-
   <!-- Include Footer -->
   <div id="footer-container"></div>
 
   <script>
-    fetch('components/navbar.html')
-      .then(response => response.text())
-      .then(data => {
-        document.getElementById('navbar-container').innerHTML = data;
+    document.addEventListener('DOMContentLoaded', function() {
+      // Önce navbar ve footer bileşenlerini yükle
+      Promise.all([
+        fetch('components/navbar.html').then(response => response.text()),
+        fetch('components/footer.html').then(response => response.text())
+      ]).then(([navbarData, footerData]) => {
+        document.getElementById('navbar-container').innerHTML = navbarData;
+        document.getElementById('footer-container').innerHTML = footerData;
+        
+        // Bileşenler yüklendikten sonra main.js yüklendiğini bildir
+        if (typeof updateHeader === 'function') {
+          updateHeader();
+          window.dispatchEvent(new Event('main_js_loaded'));
+        }
       });
-      
-    fetch('components/footer.html')
-      .then(response => response.text())
-      .then(data => {
-        document.getElementById('footer-container').innerHTML = data;
-      });
+    });
   </script>
   <script src="js/main.js"></script>
   <script src="js/home.js"></script>

@@ -16,15 +16,29 @@ exports.createAdminUser = async () => {
             
             // Admin kullanıcısını oluştur
             const admin = new User({
+                name: 'Admin',
                 email: adminEmail,
                 password: adminPassword,
-                isAdmin: true
+                isAdmin: true,
+                isVerified: true // Admin kullanıcısını doğrulanmış olarak ayarla
             });
 
             await admin.save();
             console.log('Admin kullanıcısı başarıyla oluşturuldu');
+        } else if (adminExists && !adminExists.isVerified) {
+            // Eğer admin varsa ama doğrulanmamışsa, doğrulanmış olarak işaretle
+            console.log('Mevcut admin kullanıcısını doğrulanmış olarak güncelleniyor...');
+            adminExists.isVerified = true;
+            
+            // Name alanı eksikse ekle
+            if (!adminExists.name) {
+                adminExists.name = 'Admin';
+            }
+            
+            await adminExists.save();
+            console.log('Admin kullanıcısı başarıyla güncellendi');
         } else {
-            console.log('Admin kullanıcısı zaten mevcut');
+            console.log('Admin kullanıcısı zaten mevcut ve doğrulanmış');
         }
     } catch (error) {
         console.error('Admin kullanıcısı oluşturulurken hata:', error.message);

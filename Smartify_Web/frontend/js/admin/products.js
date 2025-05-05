@@ -57,12 +57,39 @@ function setupEventListeners() {
 }
 
 // Admin oturum kontrolü
-function checkAdminAuth() {
+async function checkAdminAuth() {
     const token = localStorage.getItem('adminToken');
     
     if (!token) {
         window.location.href = '/admin/login.html';
         return;
+    }
+    
+    // Token'ın geçerliliğini kontrol et
+    try {
+        const response = await fetch('/api/auth/me', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            // Token geçersiz veya süresi dolmuş, kullanıcıyı login sayfasına yönlendir
+            localStorage.removeItem('adminToken');
+            window.location.href = '/admin/login.html?expired=true';
+            return;
+        }
+        
+        // Token geçerli, kullanıcı bilgilerini al
+        const userData = await response.json();
+        if (!userData.isAdmin) {
+            // Kullanıcı admin değil
+            localStorage.removeItem('adminToken');
+            window.location.href = '/admin/login.html?unauthorized=true';
+            return;
+        }
+    } catch (error) {
+        console.error('Token doğrulama hatası:', error);
     }
     
     // Çıkış butonuna event listener ekle
@@ -482,16 +509,39 @@ async function saveProduct() {
         const url = isEdit ? `/api/products/${productId}` : '/api/products';
         const method = isEdit ? 'PUT' : 'POST';
         
+        // Admin token'ı al
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            showNotification('Oturum bulunamadı, lütfen yeniden giriş yapın', 'error');
+            setTimeout(() => {
+                window.location.href = '/admin/login.html';
+            }, 2000);
+            return;
+        }
+        
         // API isteği
         const response = await fetch(url, {
             method,
             body: formData,
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                'Authorization': `Bearer ${token}`
             }
         });
         
         if (!response.ok) {
+            // Eğer 401 hatası alınıyorsa (Unauthorized), oturum süresi dolmuş olabilir
+            if (response.status === 401) {
+                const errorData = await response.json();
+                showNotification('Oturum süresi dolmuş, lütfen yeniden giriş yapın', 'error');
+                
+                // Kullanıcıyı login sayfasına yönlendir
+                setTimeout(() => {
+                    localStorage.removeItem('adminToken');
+                    window.location.href = '/admin/login.html?expired=true';
+                }, 2000);
+                return;
+            }
+            
             const error = await response.json();
             throw new Error(error.message || 'Ürün kaydedilirken bir hata oluştu');
         }
@@ -578,14 +628,37 @@ function confirmDelete(productId) {
 // Ürün sil
 async function deleteProduct(productId) {
     try {
+        // Admin token'ı al
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            showNotification('Oturum bulunamadı, lütfen yeniden giriş yapın', 'error');
+            setTimeout(() => {
+                window.location.href = '/admin/login.html';
+            }, 2000);
+            return;
+        }
+        
         const response = await fetch(`/api/products/${productId}`, {
             method: 'DELETE',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                'Authorization': `Bearer ${token}`
             }
         });
         
         if (!response.ok) {
+            // Eğer 401 hatası alınıyorsa (Unauthorized), oturum süresi dolmuş olabilir
+            if (response.status === 401) {
+                const errorData = await response.json();
+                showNotification('Oturum süresi dolmuş, lütfen yeniden giriş yapın', 'error');
+                
+                // Kullanıcıyı login sayfasına yönlendir
+                setTimeout(() => {
+                    localStorage.removeItem('adminToken');
+                    window.location.href = '/admin/login.html?expired=true';
+                }, 2000);
+                return;
+            }
+            
             const error = await response.json();
             throw new Error(error.message || 'Ürün silinirken bir hata oluştu');
         }

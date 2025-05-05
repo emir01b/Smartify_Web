@@ -1,7 +1,7 @@
 /* Footer Styles */
 .footer {
-  background-color: #d5e4e8;
-  color: black;
+  background-color: #125175;
+  color: white;
   padding: 4rem 0 2rem;
   margin-top: 3rem;
 }
@@ -14,7 +14,7 @@
 }
 
 .footer-column h3 {
-  color: black;
+  color: white;
   font-size: 1.2rem;
   margin-bottom: 1.5rem;
   position: relative;
@@ -37,7 +37,7 @@
 }
 
 .footer-column p {
-  color: black;
+  color: white;
   line-height: 1.6;
   margin-bottom: 1.5rem;
 }
@@ -60,7 +60,7 @@
 }
 
 .social-icon:hover {
-  background-color: var(#2962ff);
+  background-color: #0c3146;
   transform: translateY(-3px);
 }
 
@@ -73,7 +73,7 @@
 }
 
 .footer-links a {
-  color: black;
+  color: white;
   text-decoration: none;
   transition: var(--transition);
   display: inline-block;
@@ -92,7 +92,7 @@
   display: flex;
   align-items: flex-start;
   margin-bottom: 1rem;
-  color: black;
+  color: white;
 }
 
 .contact-info i {
@@ -106,7 +106,7 @@
 }
 
 .newsletter h4 {
-  color: black;
+  color: white;
   font-size: 1rem;
   margin-bottom: 1rem;
 }

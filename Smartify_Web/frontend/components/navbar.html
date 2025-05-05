@@ -34,10 +34,15 @@
         </div>
         
         <div class="header-actions">
-          <a href="account.html" class="header-action-link">
-            <i class="fas fa-user"></i>
-            <span>Hesabım</span>
-          </a>
+          <!-- Kullanıcı hesap bölümü - JS ile dinamik olarak değiştirilecek -->
+          <div id="user-account-section">
+            <!-- Varsayılan olarak giriş yapmamış kullanıcı için butonları gösteriyoruz -->
+            <div class="auth-buttons">
+              <a href="login.html" class="login-btn">
+                <i class="fas fa-sign-in-alt"></i> Giriş Yap
+              </a>
+            </div>
+          </div>
           <a href="wishlist.html" class="header-action-link">
             <i class="fas fa-heart"></i>
             <span>Favorilerim</span>
@@ -62,7 +67,7 @@
         <ul class="nav-links">
           <li><a href="index.html" class="active">Ana Sayfa</a></li>
           <li class="mega-menu">
-            <a href="products.html">Kategoriler <i class="fas fa-chevron-down"></i></a>
+            <a href="products.html?mainCategory=SmartHome">Akıllı Ev <i class="fas fa-chevron-down"></i></a>
             <div class="mega-menu-content">
               <div class="mega-menu-wrapper">
                 <div class="mega-menu-column">
@@ -74,6 +79,17 @@
                     <li><a href="products.html?category=SmartSensors">Akıllı Sensörler</a></li>
                   </ul>
                 </div>
+                <div class="mega-menu-column mega-menu-image">
+                  <img src="https://images.unsplash.com/photo-1558002038-1055907df827?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2940&q=80" alt="Akıllı Ev">
+                  <a href="products.html?mainCategory=SmartHome" class="menu-cta">Tüm Akıllı Ev Ürünleri</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="mega-menu">
+            <a href="products.html?mainCategory=Electronics">Elektronik <i class="fas fa-chevron-down"></i></a>
+            <div class="mega-menu-content">
+              <div class="mega-menu-wrapper">
                 <div class="mega-menu-column">
                   <h3><a href="products.html?mainCategory=Electronics">Elektronik</a></h3>
                   <ul>
@@ -83,6 +99,17 @@
                     <li><a href="products.html?category=Motors">Motorlar</a></li>
                   </ul>
                 </div>
+                <div class="mega-menu-column mega-menu-image">
+                  <img src="https://images.unsplash.com/photo-1597739239353-50270a473397?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2940&q=80" alt="Elektronik">
+                  <a href="products.html?mainCategory=Electronics" class="menu-cta">Tüm Elektronik Ürünler</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="mega-menu">
+            <a href="products.html?mainCategory=HomeAutomation">Ev Otomasyonu <i class="fas fa-chevron-down"></i></a>
+            <div class="mega-menu-content">
+              <div class="mega-menu-wrapper">
                 <div class="mega-menu-column">
                   <h3><a href="products.html?mainCategory=HomeAutomation">Ev Otomasyonu</a></h3>
                   <ul>
@@ -93,15 +120,31 @@
                   </ul>
                 </div>
                 <div class="mega-menu-column mega-menu-image">
-                  <img src="https://images.unsplash.com/photo-1558002038-1055907df827?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2940&q=80" alt="Akıllı Ev">
-                  <a href="products.html" class="menu-cta">Tüm Ürünler</a>
+                  <img src="https://images.unsplash.com/photo-1561706195-b8dbabced3a4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2940&q=80" alt="Ev Otomasyonu">
+                  <a href="products.html?mainCategory=HomeAutomation" class="menu-cta">Tüm Ev Otomasyonu Ürünleri</a>
                 </div>
               </div>
             </div>
           </li>
-          <li><a href="campaigns.html">Kampanyalar</a></li>
         </ul>
       </nav>
     </div>
   </div>
-</header> 
+</header>
+
+<!-- Navbar için gerekli script dosyası -->
+<script>
+  // Sayfa yüklendiğinde giriş durumunu kontrol et
+  document.addEventListener('DOMContentLoaded', function() {
+    // Ana script yüklendiyse updateHeader'ı çalıştır
+    if (typeof updateHeader === 'function') {
+      updateHeader();
+    } else {
+      // Ana script yüklenmemişse, window objesine bir event listener ekleyerek
+      // updateHeader fonksiyonu kullanılabilir olduğunda çalıştırılmasını sağla
+      window.addEventListener('main_js_loaded', function() {
+        updateHeader();
+      });
+    }
+  });
+</script> 

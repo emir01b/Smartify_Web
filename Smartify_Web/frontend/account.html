@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hesabım - Smartify</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="css/footer.css">
+  <link rel="stylesheet" href="css/account.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <script src="js/error-handler.js"></script>
+</head>
+<body>
+  <!-- Include Navbar -->
+  <div id="navbar-container"></div>
+
+  <!-- Account Section -->
+  <section class="account-section">
+    <div class="container">
+      <div class="account-container">
+        <div class="account-sidebar">
+          <div class="user-info">
+            <div class="user-avatar">
+              <img src="https://ui-avatars.com/api/?name=Kullanıcı&background=2962ff&color=fff" alt="Kullanıcı" id="user-avatar">
+            </div>
+            <div class="user-details">
+              <h3 id="user-name">Yükleniyor...</h3>
+              <p id="user-email">Yükleniyor...</p>
+            </div>
+          </div>
+          <nav class="account-nav">
+            <ul>
+              <li class="active">
+                <a href="#profile" data-tab="profile">
+                  <i class="fas fa-user"></i> Profil Bilgileri
+                </a>
+              </li>
+              <li>
+                <a href="#orders" data-tab="orders">
+                  <i class="fas fa-shopping-bag"></i> Siparişlerim
+                </a>
+              </li>
+              <li>
+                <a href="#addresses" data-tab="addresses">
+                  <i class="fas fa-map-marker-alt"></i> Adreslerim
+                </a>
+              </li>
+              <li>
+                <a href="#favorites" data-tab="favorites">
+                  <i class="fas fa-heart"></i> Favorilerim
+                </a>
+              </li>
+              <li>
+                <a href="#security" data-tab="security">
+                  <i class="fas fa-shield-alt"></i> Güvenlik
+                </a>
+              </li>
+              <li>
+                <a href="#" id="logout-btn">
+                  <i class="fas fa-sign-out-alt"></i> Çıkış Yap
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+        <div class="account-content">
+          <!-- Profile Tab -->
+          <div class="account-tab active" id="profile-tab">
+            <div class="tab-header">
+              <h2>Profil Bilgileri</h2>
+              <p>Kişisel bilgilerinizi güncelleyebilirsiniz</p>
+            </div>
+            <form id="profile-form" class="account-form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="fullname">Ad Soyad</label>
+                  <input type="text" id="fullname" name="fullname">
+                </div>
+                <div class="form-group">
+                  <label for="phone">Telefon</label>
+                  <input type="tel" id="phone" name="phone">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="email">E-posta</label>
+                  <input type="email" id="email" name="email" disabled>
+                </div>
+                <div class="form-group">
+                  <label for="birthday">Doğum Tarihi</label>
+                  <input type="date" id="birthday" name="birthday">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="bio">Hakkımda</label>
+                <textarea id="bio" name="bio" rows="4"></textarea>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Bilgileri Kaydet</button>
+              </div>
+            </form>
+          </div>
+          
+          <!-- Orders Tab -->
+          <div class="account-tab" id="orders-tab">
+            <div class="tab-header">
+              <h2>Siparişlerim</h2>
+              <p>Tüm siparişlerinizin listesi ve durumları</p>
+            </div>
+            <div class="orders-list" id="orders-list">
+              <div class="empty-state">
+                <i class="fas fa-shopping-bag"></i>
+                <h3>Henüz siparişiniz bulunmuyor</h3>
+                <p>Ürünlerimizi keşfedin ve ilk siparişinizi oluşturun</p>
+                <a href="products.html" class="btn btn-primary">Alışverişe Başla</a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Addresses Tab -->
+          <div class="account-tab" id="addresses-tab">
+            <div class="tab-header">
+              <h2>Adreslerim</h2>
+              <p>Teslimat ve fatura adreslerinizi yönetin</p>
+              <button class="btn btn-primary btn-add-address">
+                <i class="fas fa-plus"></i> Yeni Adres Ekle
+              </button>
+            </div>
+            <div class="addresses-list" id="addresses-list">
+              <div class="empty-state">
+                <i class="fas fa-map-marker-alt"></i>
+                <h3>Henüz adresiniz bulunmuyor</h3>
+                <p>Siparişleriniz için teslimat adresi ekleyin</p>
+                <button class="btn btn-primary btn-add-address">Adres Ekle</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Favorites Tab -->
+          <div class="account-tab" id="favorites-tab">
+            <div class="tab-header">
+              <h2>Favorilerim</h2>
+              <p>Beğendiğiniz ve takip ettiğiniz ürünler</p>
+            </div>
+            <div class="favorites-list" id="favorites-list">
+              <div class="empty-state">
+                <i class="fas fa-heart"></i>
+                <h3>Henüz favori ürününüz bulunmuyor</h3>
+                <p>Beğendiğiniz ürünleri favorilerinize ekleyin</p>
+                <a href="products.html" class="btn btn-primary">Ürünleri Keşfet</a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Security Tab -->
+          <div class="account-tab" id="security-tab">
+            <div class="tab-header">
+              <h2>Güvenlik</h2>
+              <p>Hesap güvenliği ve şifre ayarları</p>
+            </div>
+            <form id="security-form" class="account-form">
+              <div class="form-group">
+                <label for="current-password">Mevcut Şifre</label>
+                <div class="password-field">
+                  <input type="password" id="current-password" name="currentPassword">
+                  <button type="button" class="password-toggle">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="new-password">Yeni Şifre</label>
+                  <div class="password-field">
+                    <input type="password" id="new-password" name="newPassword">
+                    <button type="button" class="password-toggle">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="confirm-password">Şifre Tekrar</label>
+                  <div class="password-field">
+                    <input type="password" id="confirm-password" name="confirmPassword">
+                    <button type="button" class="password-toggle">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Şifreyi Güncelle</button>
+              </div>
+            </form>
+            
+            <div class="security-settings">
+              <h3>Hesap Güvenliği</h3>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <h4>İki Faktörlü Doğrulama</h4>
+                  <p>Hesabınıza giriş yaparken ekstra güvenlik sağlar</p>
+                </div>
+                <div class="setting-control">
+                  <label class="switch">
+                    <input type="checkbox" id="two-factor">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <h4>Giriş Bildirimleri</h4>
+                  <p>Hesabınıza yeni bir cihazdan giriş yapıldığında bildirim alın</p>
+                </div>
+                <div class="setting-control">
+                  <label class="switch">
+                    <input type="checkbox" id="login-alerts" checked>
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Include Footer -->
+  <div id="footer-container"></div>
+
+  <script>
+    fetch('components/navbar.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('navbar-container').innerHTML = data;
+        
+        // Navbar yüklendikten sonra main.js çalıştırılmalıdır
+        const script = document.createElement('script');
+        script.src = 'js/main.js';
+        script.onload = function() {
+          // main.js yüklendikten sonra event'i tetikle
+          window.dispatchEvent(new Event('main_js_loaded'));
+          // Kullanıcı durumunu güncelle
+          if (typeof updateHeader === 'function') {
+            updateHeader();
+          }
+        };
+        document.body.appendChild(script);
+      });
+      
+    fetch('components/footer.html')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('footer-container').innerHTML = data;
+      });
+  </script>
+  <script src="js/account.js"></script>
+</body>
+</html> 

@@ -53,11 +53,11 @@ function showToast(message, type = 'success') {
     const container = document.querySelector('.toast-container') || createToastContainer();
     container.appendChild(toast);
 
-    // 3 saniye sonra toast'u kaldır
+    // 4 saniye sonra toast'u kaldır
     setTimeout(() => {
         toast.classList.add('fade-out');
         setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    }, 4000);
 }
 
 function createToastContainer() {
@@ -230,4 +230,176 @@ async function compressImage(file) {
         
         reader.onerror = reject;
     });
+}
+
+// Admin paneli ortak işlevleri
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Admin oturum kontrolü
+    checkAdminAuth();
+    
+    // Logout butonu
+    const logoutButton = document.getElementById('adminLogout');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', () => {
+            localStorage.removeItem('adminToken');
+            window.location.href = '/admin/login.html';
+        });
+    }
+});
+
+// Admin oturum kontrolü
+async function checkAdminAuth() {
+    const token = localStorage.getItem('adminToken');
+    
+    if (!token) {
+        window.location.href = '/admin/login.html';
+        return;
+    }
+    
+    // Token'ın geçerliliğini kontrol et
+    try {
+        const response = await fetch('/api/auth/me', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            // Token geçersiz veya süresi dolmuş, kullanıcıyı login sayfasına yönlendir
+            localStorage.removeItem('adminToken');
+            window.location.href = '/admin/login.html?expired=true';
+            return;
+        }
+        
+        // Token geçerli, kullanıcı bilgilerini al
+        const userData = await response.json();
+        if (!userData.isAdmin) {
+            // Kullanıcı admin değil
+            localStorage.removeItem('adminToken');
+            window.location.href = '/admin/login.html?unauthorized=true';
+            return;
+        }
+    } catch (error) {
+        console.error('Token doğrulama hatası:', error);
+        window.location.href = '/admin/login.html?error=true';
+    }
+}
+
+// API isteği gönder
+async function fetchAPI(url, method = 'GET', body = null) {
+    const token = localStorage.getItem('adminToken');
+    
+    if (!token) {
+        window.location.href = '/admin/login.html';
+        return null;
+    }
+    
+    try {
+        const options = {
+            method,
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        };
+        
+        if (body) {
+            options.body = JSON.stringify(body);
+        }
+        
+        const response = await fetch(url, options);
+        
+        if (response.status === 401) {
+            // Token geçersiz veya süresi dolmuş
+            localStorage.removeItem('adminToken');
+            window.location.href = '/admin/login.html?expired=true';
+            return null;
+        }
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'API isteği başarısız');
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('API hatası:', error);
+        showNotification(error.message, 'error');
+        return null;
+    }
+}
+
+// Bildirim göster
+function showNotification(message, type = 'info') {
+    // Önceki bildirimleri kaldır
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => {
+        notification.classList.add('hide');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    });
+    
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+        <p>${message}</p>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // 3 saniye sonra bildirim kaybolsun
+    setTimeout(() => {
+        notification.classList.add('hide');
+        setTimeout(() => {
+            notification.remove();
+        }, 500);
+    }, 3000);
+}
+
+// Tarih formatla
+function formatDate(dateString) {
+    const options = { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    };
+    
+    return new Date(dateString).toLocaleDateString('tr-TR', options);
+}
+
+// Para birimi formatla
+function formatCurrency(amount) {
+    return parseFloat(amount).toLocaleString('tr-TR', {
+        style: 'currency',
+        currency: 'TRY',
+        minimumFractionDigits: 2
+    });
+}
+
+// ID kısaltma
+function shortenId(id) {
+    return id.substring(0, 8) + '...';
+}
+
+// Durum rengini belirle
+function getStatusClass(status) {
+    switch (status) {
+        case 'Beklemede':
+            return 'pending';
+        case 'İşleme Alındı':
+            return 'processing';
+        case 'Kargoya Verildi':
+            return 'shipped';
+        case 'Teslim Edildi':
+            return 'delivered';
+        case 'İptal Edildi':
+            return 'canceled';
+        default:
+            return '';
+    }
 } 

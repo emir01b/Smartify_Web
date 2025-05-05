@@ -16,6 +16,7 @@ const path = require('path');
 const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
 const categoryRoutes = require('./routes/categories');
+const orderRoutes = require('./routes/orders');
 
 // Middleware
 const { authenticateToken } = require('./middleware/auth');
@@ -64,6 +65,7 @@ mongoose.connect(MONGODB_URI)
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/orders', orderRoutes);
 
 // Statik dosyaları sun - API rotalarından sonra statik dosyaları sun
 app.use(express.static(path.join(__dirname, '../frontend')));

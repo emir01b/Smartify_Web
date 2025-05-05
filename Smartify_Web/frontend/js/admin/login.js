@@ -3,6 +3,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const togglePasswordBtn = document.querySelector('.toggle-password');
     const passwordInput = document.getElementById('password');
     const errorMessage = document.getElementById('error-message');
+    
+    // URL parametrelerini kontrol et
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('expired')) {
+        errorMessage.textContent = 'Oturum süreniz doldu. Lütfen tekrar giriş yapın.';
+        errorMessage.style.display = 'block';
+    } else if (urlParams.has('unauthorized')) {
+        errorMessage.textContent = 'Bu sayfaya erişim yetkiniz yok.';
+        errorMessage.style.display = 'block';
+    }
 
     // Şifre göster/gizle
     if (togglePasswordBtn) {

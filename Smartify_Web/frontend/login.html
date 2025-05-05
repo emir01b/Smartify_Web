@@ -3,56 +3,125 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Giriş Yap - 3D Tech</title>
+  <title>Hesap - Smartify</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/navbar.css">
   <link rel="stylesheet" href="css/footer.css">
+  <link rel="stylesheet" href="css/auth.css">
   <link rel="stylesheet" href="css/responsive.css">
+  <script src="js/error-handler.js"></script>
 </head>
 <body>
   <!-- Include Navbar -->
   <div id="navbar-container"></div>
 
-  <!-- Login Section -->
+  <!-- Login & Register Section -->
   <section class="auth-section">
     <div class="container">
       <div class="auth-container">
         <div class="auth-tabs">
-          <button class="auth-tab active">Giriş Yap</button>
-          <button class="auth-tab">Kayıt Ol</button>
+          <button class="auth-tab active" data-tab="login">Giriş Yap</button>
+          <button class="auth-tab" data-tab="register">Kayıt Ol</button>
+          <button class="auth-tab" data-tab="verify" style="display: none;">E-posta Doğrulama</button>
         </div>
         <div class="auth-content">
-          <form id="loginForm" class="auth-form">
+          <!-- Giriş Formu -->
+          <form id="login-form" class="auth-form active">
             <div class="form-group">
-              <label for="email">E-posta</label>
-              <input type="email" id="email" name="email" required>
+              <label for="login-email">E-posta</label>
+              <input type="email" id="login-email" name="email" required>
             </div>
             <div class="form-group">
-              <label for="password">Şifre</label>
-              <input type="password" id="password" name="password" required>
+              <label for="login-password">Şifre</label>
+              <div class="password-field">
+                <input type="password" id="login-password" name="password" required>
+                <button type="button" class="password-toggle">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
             </div>
             <div class="form-group">
               <div class="remember-forgot">
-                <label>
+                <label class="remember-me">
                   <input type="checkbox" name="remember"> Beni Hatırla
                 </label>
                 <a href="#" class="forgot-password">Şifremi Unuttum</a>
               </div>
             </div>
-            <button type="submit" class="btn">Giriş Yap</button>
+            <button type="submit" class="btn btn-primary btn-block">Giriş Yap</button>
           </form>
+
+          <!-- Kayıt Formu -->
+          <form id="register-form" class="auth-form">
+            <div class="form-group">
+              <label for="register-name">Ad Soyad</label>
+              <input type="text" id="register-name" name="name" required>
+            </div>
+            <div class="form-group">
+              <label for="register-email">E-posta</label>
+              <input type="email" id="register-email" name="email" required>
+            </div>
+            <div class="form-group">
+              <label for="register-password">Şifre</label>
+              <div class="password-field">
+                <input type="password" id="register-password" name="password" required>
+                <button type="button" class="password-toggle">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="register-confirm-password">Şifre Tekrar</label>
+              <div class="password-field">
+                <input type="password" id="register-confirm-password" name="confirm-password" required>
+                <button type="button" class="password-toggle">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="agreement">
+                <input type="checkbox" name="terms" required>
+                <span>Kullanım şartlarını ve gizlilik politikasını kabul ediyorum</span>
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Kayıt Ol</button>
+          </form>
+          
+          <!-- E-posta Doğrulama Formu -->
+          <form id="verification-form" class="auth-form">
+            <div class="verification-message">
+              <i class="fas fa-envelope-circle-check"></i>
+              <h3>E-posta Doğrulama</h3>
+              <p>E-posta adresinize bir doğrulama kodu gönderdik. Lütfen gelen kutunuzu kontrol edin ve aşağıya kodu girin.</p>
+            </div>
+            <div class="form-group">
+              <label for="verification-code">Doğrulama Kodu</label>
+              <input type="text" id="verification-code" name="verification-code" maxlength="6" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Doğrula</button>
+            <div class="verification-actions">
+              <p>Kod gelmedi mi?</p>
+              <button type="button" id="resend-code" class="btn-link">Tekrar Gönder</button>
+              <button type="button" id="change-email" class="btn-link">E-posta Değiştir</button>
+            </div>
+            <input type="hidden" id="user-id" name="user-id">
+          </form>
+
           <div class="social-login">
-            <p>veya sosyal medya ile giriş yapın</p>
+            <div class="divider">
+              <span>veya</span>
+            </div>
             <div class="social-buttons">
-              <button class="social-btn google">
+              <button type="button" class="social-btn google">
                 <i class="fab fa-google"></i>
-                Google ile Giriş
+                Google ile Devam Et
               </button>
-              <button class="social-btn facebook">
+              <button type="button" class="social-btn facebook">
                 <i class="fab fa-facebook"></i>
-                Facebook ile Giriş
+                Facebook ile Devam Et
               </button>
             </div>
           </div>
@@ -61,22 +130,74 @@
     </div>
   </section>
 
+  <!-- Doğrulama Modal -->
+  <div class="verification-modal" id="verification-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <i class="fas fa-envelope-circle-check"></i>
+        <h3>E-posta Doğrulama</h3>
+        <p>E-posta adresinize bir doğrulama kodu gönderdik. Lütfen aşağıya 6 haneli kodu girin.</p>
+      </div>
+      <form id="modal-verification-form">
+        <div class="verification-code-input">
+          <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric" autofocus>
+          <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric">
+          <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric">
+          <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric">
+          <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric">
+          <input type="text" maxlength="1" pattern="[0-9]" inputmode="numeric">
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary btn-block">Doğrula ve Kaydol</button>
+        </div>
+        <div class="modal-footer">
+          <p>Kod gelmedi mi?</p>
+          <div>
+            <button type="button" id="modal-resend-code" class="btn-link">Tekrar Gönder</button>
+            <button type="button" id="modal-cancel" class="btn-link">İptal</button>
+          </div>
+        </div>
+        <input type="hidden" id="modal-user-id" name="modal-user-id">
+        <input type="hidden" id="temp-name" name="temp-name">
+        <input type="hidden" id="temp-email" name="temp-email">
+        <input type="hidden" id="temp-password" name="temp-password">
+      </form>
+    </div>
+  </div>
+
   <!-- Include Footer -->
   <div id="footer-container"></div>
 
   <script>
-    fetch('components/navbar.html')
-      .then(response => response.text())
-      .then(data => {
-        document.getElementById('navbar-container').innerHTML = data;
-      });
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Login sayfası DOMContentLoaded çalıştı');
       
-    fetch('components/footer.html')
-      .then(response => response.text())
-      .then(data => {
-        document.getElementById('footer-container').innerHTML = data;
+      // Önce navbar ve footer bileşenlerini yükle
+      Promise.all([
+        fetch('components/navbar.html').then(response => response.text()),
+        fetch('components/footer.html').then(response => response.text())
+      ]).then(([navbarData, footerData]) => {
+        document.getElementById('navbar-container').innerHTML = navbarData;
+        document.getElementById('footer-container').innerHTML = footerData;
+        
+        // Bileşenler yüklendikten sonra updateHeader fonksiyonunu çağır
+        console.log('Navigation bileşenleri yüklendi, updateHeader kontrol ediliyor');
+        
+        // updateHeader fonksiyonu tanımlı mı kontrol et
+        if (typeof window.updateHeader === 'function') {
+          console.log('updateHeader fonksiyonu çağrılıyor');
+          window.updateHeader();
+          window.dispatchEvent(new Event('main_js_loaded'));
+        } else {
+          console.warn('updateHeader fonksiyonu bulunamadı!');
+        }
+      }).catch(error => {
+        console.error('Navbar/Footer yüklenirken hata:', error);
       });
+    });
   </script>
+  
+  <!-- JavaScript dosyalarını yükle (önce main.js, sonra auth.js) -->
   <script src="js/main.js"></script>
   <script src="js/auth.js"></script>
 </body>

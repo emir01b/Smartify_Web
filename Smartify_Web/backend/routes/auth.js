@@ -1,35 +1,27 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const authController = require('../controllers/authController');
+const { authenticateToken } = require('../middleware/auth');
 
-router.post('/login', async (req, res, next) => {
-    try {
-        const { email, password } = req.body;
+// Kullanıcı ön kaydı - E-posta doğrulama kodu gönderir
+router.post('/pre-register', authController.preRegister);
 
-        // Kullanıcıyı bul
-        const user = await User.findOne({ email });
-        if (!user || !user.isAdmin) {
-            return res.status(401).json({ message: 'Geçersiz e-posta veya şifre' });
-        }
+// Kullanıcı kaydı tamamlama ve doğrulama
+router.post('/complete-register', authController.completeRegister);
 
-        // Şifreyi kontrol et
-        const isMatch = await user.comparePassword(password);
-        if (!isMatch) {
-            return res.status(401).json({ message: 'Geçersiz e-posta veya şifre' });
-        }
+// Kullanıcı kaydı - Geleneksel yöntem
+router.post('/register', authController.register);
 
-        // Token oluştur
-        const token = jwt.sign(
-            { userId: user._id },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
-        );
+// E-posta doğrulama
+router.post('/verify', authController.verifyEmail);
 
-        res.json({ token });
-    } catch (error) {
-        next(error);
-    }
-});
+// Doğrulama kodunu tekrar gönder
+router.post('/resend-verification', authController.resendVerificationCode);
+
+// Kullanıcı girişi
+router.post('/login', authController.login);
+
+// Kullanıcı profili bilgilerini getir
+router.get('/me', authenticateToken, authController.getProfile);
 
 module.exports = router; 
