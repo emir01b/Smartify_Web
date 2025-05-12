@@ -440,28 +440,38 @@ async function handleProductSubmit(e) {
 }
 
 function handleImagePreview(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
     
-    // Dosya boyutu kontrolü (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-        showNotification('Dosya boyutu 5MB\'dan küçük olmalıdır', 'error');
-        e.target.value = '';
-        return;
-    }
+    imagePreview.innerHTML = ''; // Önizleme alanını temizle
     
-    // Dosya türü kontrolü
-    if (!file.type.match('image.*')) {
-        showNotification('Lütfen geçerli bir resim dosyası seçin', 'error');
-        e.target.value = '';
-        return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        imagePreview.innerHTML = `<img src="${event.target.result}" alt="Önizleme">`;
-    };
-    reader.readAsDataURL(file);
+    Array.from(files).forEach(file => {
+        // Dosya boyutu kontrolü (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            showNotification('Dosya boyutu 5MB\'dan küçük olmalıdır: ' + file.name, 'error');
+            return;
+        }
+        
+        // Dosya türü kontrolü
+        if (!file.type.match('image.*')) {
+            showNotification('Lütfen geçerli bir resim dosyası seçin: ' + file.name, 'error');
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const imgContainer = document.createElement('div');
+            imgContainer.className = 'preview-image-container';
+            
+            const img = document.createElement('img');
+            img.src = event.target.result;
+            img.alt = 'Önizleme';
+            
+            imgContainer.appendChild(img);
+            imagePreview.appendChild(imgContainer);
+        };
+        reader.readAsDataURL(file);
+    });
 }
 
 // Ürün kaydet

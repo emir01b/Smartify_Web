@@ -9,13 +9,22 @@ async function displayProducts() {
         const mainCategory = urlParams.get('mainCategory');
         const search = urlParams.get('search');
         const sort = urlParams.get('sort') || 'newest';
+        const isNew = urlParams.get('isNew');
+        const isPopular = urlParams.get('isPopular');
+        const inStock = urlParams.get('inStock');
 
         // API endpoint oluştur
-        let endpoint = 'http://localhost:3000/api/products?';
+        let endpoint = '/api/products?';
         if (category) endpoint += `category=${category}&`;
         if (mainCategory) endpoint += `mainCategory=${mainCategory}&`;
         if (search) endpoint += `search=${search}&`;
-        if (sort) endpoint += `sort=${sort}`;
+        if (sort) endpoint += `sort=${sort}&`;
+        if (isNew === 'true') endpoint += `isNew=true&`;
+        if (isPopular === 'true') endpoint += `isPopular=true&`;
+        if (inStock === 'true') endpoint += `stock_gt=0&`;
+
+        // Aktif filtreleri göster
+        displayActiveFilters();
 
         // Ürünleri getir
         const response = await fetch(endpoint, {
@@ -23,8 +32,7 @@ async function displayProducts() {
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
-            },
-            credentials: 'include'
+            }
         });
         if (!response.ok) throw new Error('Ürünler yüklenemedi');
         
@@ -41,57 +49,33 @@ async function displayProducts() {
             return;
         }
 
-        // Ürünleri listele
-        productsContainer.innerHTML = products.map(product => {
+        // Ürünleri görüntüle
+        let html = '';
+        products.forEach(product => {
             // Varsayılan resim yolu
             const defaultImageUrl = '/images/default-product.png';
+            const imageUrl = product.images && product.images.length > 0 ? product.images[0] : defaultImageUrl;
             
-            // Resim URL'sini kontrol et - Eğer resim URL'si yoksa veya geçersizse varsayılan resmi kullan
-            let imageUrl = defaultImageUrl;
-            if (product.images && product.images.length > 0) {
-                // Resim URL'sini kontrol et, eğer URL bir HTTP URL'si değilse, varsayılan resmi kullan
-                if (product.images[0].startsWith('http') || product.images[0].startsWith('/')) {
-                    imageUrl = product.images[0];
-                }
-            }
-                
-            // Kategori bilgisini kontrol et
-            const categoryText = product.categoryNames && product.categoryNames.length > 0 
-                ? product.categoryNames.join(' > ') 
-                : (product.category || 'Genel');
+            // Kategori metni
+            const categoryText = product.categoryNames ? product.categoryNames.join(' > ') : '';
             
-            // Kategori adını Türkçeleştir
-            let turkishCategory = categoryText;
-            
-            // İngilizce kategori adlarını Türkçe karşılıklarıyla değiştir
-            if (turkishCategory === 'Electronics') turkishCategory = 'Elektronik';
-            if (turkishCategory === 'SmartHome') turkishCategory = 'Akıllı Ev';
-            if (turkishCategory === 'HomeAutomation') turkishCategory = 'Ev Otomasyonu';
-            if (turkishCategory === 'General') turkishCategory = 'Genel';
-            if (turkishCategory === 'Accessories') turkishCategory = 'Aksesuarlar';
-            if (turkishCategory === 'Components') turkishCategory = 'Komponentler';
-            if (turkishCategory === 'Sensors') turkishCategory = 'Sensörler';
-            if (turkishCategory === 'Displays') turkishCategory = 'Ekranlar';
-            if (turkishCategory === 'Printers') turkishCategory = '3D Yazıcılar';
-            if (turkishCategory === 'Spare Parts') turkishCategory = 'Yedek Parçalar';
-            
-            // Fiyat bilgisini kontrol et
+            // Fiyat bilgisi
             const price = product.price || 0;
             const oldPrice = product.oldPrice || null;
                 
-            return `
+            html += `
                 <div class="product-card">
                     <div class="product-image">
                         <img src="${imageUrl}" alt="${product.name || 'Ürün'}" 
                              onerror="this.onerror=null; this.src='${defaultImageUrl}'; console.error = (function() { return function() {}; })();">
                         <div class="product-badges">
-                            ${product.isNew ? '<span class="product-badge badge-new">Yeni</span>' : ''}
+                            ${product.isNew ? '<span class="product-badge badge-new">Yeni Ürün</span>' : ''}
                             ${product.isPopular ? '<span class="product-badge badge-popular">Popüler</span>' : ''}
-                            ${product.inStock === false ? '<span class="product-badge badge-out">Tükendi</span>' : ''}
+                            ${product.stock <= 0 ? '<span class="product-badge badge-out">Tükendi</span>' : ''}
                         </div>
                     </div>
                     <div class="product-content">
-                        <div class="product-category">${turkishCategory}</div>
+                        <div class="product-category">${categoryText}</div>
                         <h3 class="product-title">
                             <a href="product-detail.html?id=${product._id}">${product.name || 'İsimsiz Ürün'}</a>
                         </h3>
@@ -100,7 +84,7 @@ async function displayProducts() {
                             ${oldPrice ? `<span class="old-price">${oldPrice.toLocaleString('tr-TR')} ₺</span>` : ''}
                         </div>
                         <div class="product-actions">
-                            <button class="add-to-cart" data-id="${product._id}" ${product.inStock === false ? 'disabled' : ''}>
+                            <button class="add-to-cart" data-id="${product._id}" ${product.stock <= 0 ? 'disabled' : ''}>
                                 <i class="fas fa-shopping-cart"></i> Sepete Ekle
                             </button>
                             <button class="wishlist-btn" data-id="${product._id}">
@@ -110,26 +94,14 @@ async function displayProducts() {
                     </div>
                 </div>
             `;
-        }).join('');
-
-        // Sepete ekle butonlarına event listener ekle
-        document.querySelectorAll('.add-to-cart').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const productId = e.currentTarget.dataset.id;
-                addToCart(productId);
-            });
         });
         
-        // Favorilere ekle butonlarına event listener ekle
-        document.querySelectorAll('.wishlist-btn').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const productId = e.currentTarget.dataset.id;
-                toggleWishlist(productId, e.currentTarget);
-            });
-        });
-
+        productsContainer.innerHTML = html;
+        
+        // Butonlara event listener ekle
+        setupProductButtons();
     } catch (error) {
-        console.error('Ürünler yüklenirken hata:', error);
+        console.error('Ürünleri yükleme hatası:', error);
         productsContainer.innerHTML = `
             <div class="error-message">
                 <i class="fas fa-exclamation-circle"></i>
@@ -141,49 +113,155 @@ async function displayProducts() {
 
 // Filtre ayarları
 function setupFilters() {
-    // Filtre butonlarına event listener ekle
-    document.querySelectorAll('.filter-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            const category = button.dataset.category;
-            if (category === 'all') {
-                window.location.href = 'products.html';
-            } else {
-                window.location.href = `products.html?mainCategory=${category}`;
-            }
-        });
-    });
-    
-    // Arama kutusuna event listener ekle
+    // Arama kutusu
     const searchBox = document.querySelector('#product-search');
-    const searchIcon = document.querySelector('.search-box i');
+    const searchButton = document.querySelector('.search-button');
     
-    if (searchBox && searchIcon) {
-        // Arama ikonuna tıklandığında
-        searchIcon.addEventListener('click', () => {
+    if (searchBox && searchButton) {
+        // URL'den arama sorgusunu al
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchQuery = urlParams.get('search');
+        if (searchQuery) {
+            searchBox.value = searchQuery;
+        }
+
+        // Arama butonuna tıklandığında
+        searchButton.addEventListener('click', () => {
             if (searchBox.value.trim()) {
-                window.location.href = `products.html?search=${encodeURIComponent(searchBox.value.trim())}`;
+                updateFilters('search', searchBox.value.trim());
             }
         });
         
         // Enter tuşuna basıldığında
         searchBox.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                if (searchBox.value.trim()) {
-                    window.location.href = `products.html?search=${encodeURIComponent(searchBox.value.trim())}`;
-                }
+            if (e.key === 'Enter' && searchBox.value.trim()) {
+                updateFilters('search', searchBox.value.trim());
             }
         });
     }
     
-    // Sıralama seçeneğine event listener ekle
-    const sortSelect = document.querySelector('.sort-options select');
-    if (sortSelect) {
-        sortSelect.addEventListener('change', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            urlParams.set('sort', sortSelect.value);
-            window.location.href = `products.html?${urlParams.toString()}`;
+    // Kategori balonları
+    document.querySelectorAll('.category-pill').forEach(pill => {
+        // URL'den aktif kategoriyi kontrol et
+        const urlParams = new URLSearchParams(window.location.search);
+        const activeCategory = urlParams.get('mainCategory');
+        
+        if (activeCategory === pill.dataset.category) {
+            pill.classList.add('active');
+        } else if (activeCategory === null && pill.dataset.category === 'all') {
+            pill.classList.add('active');
+        } else {
+            pill.classList.remove('active');
+        }
+
+        pill.addEventListener('click', () => {
+            // Diğer balonlardan active sınıfını kaldır
+            document.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
+            // Tıklanan balona active sınıfını ekle
+            pill.classList.add('active');
+
+            const category = pill.dataset.category;
+            if (category === 'all') {
+                const urlParams = new URLSearchParams(window.location.search);
+                urlParams.delete('mainCategory');
+                window.location.href = `products.html?${urlParams.toString()}`;
+            } else {
+                updateFilters('mainCategory', category);
+            }
         });
+    });
+}
+
+// Aktif filtreleri göster
+function displayActiveFilters() {
+    const activeFilters = document.getElementById('activeFilters');
+    const urlParams = new URLSearchParams(window.location.search);
+    let html = '';
+
+    // Ana kategori filtresi
+    const mainCategory = urlParams.get('mainCategory');
+    if (mainCategory) {
+        const categoryName = getCategoryName(mainCategory);
+        html += createActiveFilterTag('mainCategory', categoryName);
     }
+
+    // Arama filtresi
+    const search = urlParams.get('search');
+    if (search) {
+        html += createActiveFilterTag('search', `"${search}"`);
+    }
+
+    activeFilters.innerHTML = html;
+
+    // Filtre kaldırma butonlarına event listener ekle
+    document.querySelectorAll('.active-filter button').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const filterType = e.currentTarget.dataset.type;
+            removeFilter(filterType);
+        });
+    });
+}
+
+// Aktif filtre etiketi oluştur
+function createActiveFilterTag(type, text) {
+    return `
+        <div class="active-filter">
+            <span>${text}</span>
+            <button type="button" data-type="${type}">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+}
+
+// Kategori adını al
+function getCategoryName(categoryCode) {
+    const categoryMap = {
+        'SmartHome': 'Akıllı Ev',
+        'Electronics': 'Elektronik',
+        'HomeAutomation': 'Ev Otomasyonu',
+        // Diğer kategoriler buraya eklenebilir
+    };
+    return categoryMap[categoryCode] || categoryCode;
+}
+
+// Filtre kaldır
+function removeFilter(type) {
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.delete(type);
+    window.location.href = `products.html?${urlParams.toString()}`;
+}
+
+// Filtreleri güncelle
+function updateFilters(key, value) {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (value === null) {
+        urlParams.delete(key);
+    } else {
+        urlParams.set(key, value);
+    }
+    
+    window.location.href = `products.html?${urlParams.toString()}`;
+}
+
+// Ürün butonlarına event listener ekle
+function setupProductButtons() {
+    // Sepete ekle butonları
+    document.querySelectorAll('.add-to-cart').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const productId = e.currentTarget.dataset.id;
+            addToCart(productId);
+        });
+    });
+    
+    // Favorilere ekle butonları
+    document.querySelectorAll('.wishlist-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const productId = e.currentTarget.dataset.id;
+            toggleWishlist(productId, e.currentTarget);
+        });
+    });
 }
 
 // Sepete ürün ekle
@@ -284,15 +362,4 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Filtre ayarlarını kur
     setupFilters();
-    
-    // URL'den arama sorgusunu al ve arama kutusuna yerleştir
-    const urlParams = new URLSearchParams(window.location.search);
-    const searchQuery = urlParams.get('search');
-    
-    if (searchQuery) {
-        const searchInput = document.querySelector('#product-search');
-        if (searchInput) {
-            searchInput.value = searchQuery;
-        }
-    }
 });

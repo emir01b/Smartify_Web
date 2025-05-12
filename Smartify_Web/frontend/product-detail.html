@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ürün Detayı - 3D Tech</title>
+  <title>Ürün Detayı - Smartify</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
@@ -19,133 +19,80 @@
   <!-- Product Detail Section -->
   <section class="product-detail">
     <div class="container">
+      <!-- Kategori Yolu -->
+      <div class="breadcrumb" id="categoryPath">
+        <!-- Kategori yolu buraya dinamik olarak eklenecek -->
+      </div>
+      
       <div class="product-grid">
         <!-- Product Images -->
         <div class="product-images">
           <div class="main-image">
-            <img src="images/products/3d-printer-1.jpg" alt="3D Yazıcı" id="mainImage">
+            <img src="" alt="" id="mainImage">
           </div>
-          <div class="thumbnail-images">
-            <img src="images/products/3d-printer-1.jpg" alt="3D Yazıcı Thumbnail 1" class="active">
-            <img src="images/products/3d-printer-2.jpg" alt="3D Yazıcı Thumbnail 2">
-            <img src="images/products/3d-printer-3.jpg" alt="3D Yazıcı Thumbnail 3">
-            <img src="images/products/3d-printer-4.jpg" alt="3D Yazıcı Thumbnail 4">
+          <div class="thumbnail-images" id="thumbnailContainer">
+            <!-- Thumbnails will be dynamically added here -->
           </div>
         </div>
 
         <!-- Product Info -->
         <div class="product-info">
-          <h1>Creality Ender 3 V3 SE 3D Yazıcı</h1>
+          <h1 id="productTitle"></h1>
           <div class="product-meta">
-            <div class="rating">
-              <i class="fas fa-star"></i>
-              <i class="fas fa-star"></i>
-              <i class="fas fa-star"></i>
-              <i class="fas fa-star"></i>
-              <i class="fas fa-star-half-alt"></i>
-              <span>(24 değerlendirme)</span>
-            </div>
-            <div class="stock-status in-stock">
-              <i class="fas fa-check-circle"></i> Stokta
+            <div class="stock-status" id="stockStatus">
+              <i class="fas fa-check-circle"></i>
+              <span></span>
             </div>
           </div>
-          <div class="product-price">
-            <span class="current-price">8.999,00 ₺</span>
-            <span class="old-price">10.999,00 ₺</span>
-            <span class="discount">%18 İndirim</span>
+          
+          <!-- Fiyat ve Sepete Ekleme -->
+          <div class="price-cart-section">
+            <div class="product-price">
+              <span class="current-price" id="productPrice"></span>
+            </div>
+            <div class="product-actions">
+              <div class="quantity-selector">
+                <button class="qty-btn minus" type="button"><i class="fas fa-minus"></i></button>
+                <input type="number" id="quantity" value="1" min="1" max="10">
+                <button class="qty-btn plus" type="button"><i class="fas fa-plus"></i></button>
+              </div>
+              <button class="btn add-to-cart" id="addToCartBtn">
+                <i class="fas fa-shopping-cart"></i>
+                Sepete Ekle
+              </button>
+            </div>
           </div>
-          <div class="product-description">
-            <p>Creality Ender 3 V3 SE, yeni nesil 3D yazıcı teknolojisi ile donatılmış, kullanıcı dostu ve yüksek performanslı bir 3D yazıcıdır. Yenilenmiş tasarımı ve geliştirilmiş özellikleriyle hem hobi amaçlı kullanıcılar hem de profesyoneller için ideal bir seçimdir.</p>
-          </div>
+          
+          <!-- Ürün Özellikleri -->
           <div class="product-features">
-            <h3>Öne Çıkan Özellikler</h3>
-            <ul>
-              <li><i class="fas fa-check"></i> 220x220x250mm Baskı Hacmi</li>
-              <li><i class="fas fa-check"></i> Otomatik Yatak Seviyeleme</li>
-              <li><i class="fas fa-check"></i> Dokunmatik Ekran</li>
-              <li><i class="fas fa-check"></i> Filament Sensörü</li>
-              <li><i class="fas fa-check"></i> Resume Printing Özelliği</li>
+            <h3>Özellikler</h3>
+            <ul id="productFeatures">
+              <!-- Özellikler buraya dinamik olarak eklenecek -->
             </ul>
           </div>
-          <div class="product-actions">
-            <div class="quantity-selector">
-              <button class="qty-btn minus"><i class="fas fa-minus"></i></button>
-              <input type="number" value="1" min="1" max="10">
-              <button class="qty-btn plus"><i class="fas fa-plus"></i></button>
-            </div>
-            <button class="btn add-to-cart">
-              <i class="fas fa-shopping-cart"></i>
-              Sepete Ekle
-            </button>
-            <button class="btn wishlist-btn">
-              <i class="far fa-heart"></i>
-            </button>
-          </div>
-          <div class="product-additional">
-            <div class="delivery-info">
-              <i class="fas fa-truck"></i>
-              <span>Ücretsiz Kargo</span>
-            </div>
-            <div class="warranty-info">
-              <i class="fas fa-shield-alt"></i>
-              <span>2 Yıl Garanti</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Product Tabs -->
-      <div class="product-tabs">
-        <div class="tab-buttons">
-          <button class="tab-btn active" data-tab="description">Ürün Açıklaması</button>
-          <button class="tab-btn" data-tab="specifications">Teknik Özellikler</button>
-          <button class="tab-btn" data-tab="reviews">Değerlendirmeler</button>
-        </div>
-        <div class="tab-content">
-          <div class="tab-panel active" id="description">
-            <h3>Ürün Detayları</h3>
-            <p>Creality Ender 3 V3 SE, yeni başlayanlar için mükemmel bir başlangıç 3D yazıcısıdır. Kolay kurulum ve kullanım özellikleriyle öne çıkan bu model, yüksek kaliteli baskılar almanızı sağlar.</p>
-            <p>Otomatik yatak seviyeleme özelliği sayesinde her seferinde mükemmel ilk katman elde edersiniz. Dokunmatik ekranı ile kolay kullanım sağlarken, filament sensörü sayesinde baskı sırasında filament bittiğinde otomatik olarak durur ve filamentin değiştirilmesini bekler.</p>
-          </div>
-          <div class="tab-panel" id="specifications">
+          
+          <!-- Teknik Özellikler -->
+          <div class="product-specifications">
             <h3>Teknik Özellikler</h3>
-            <table class="specs-table">
-              <tr>
-                <td>Baskı Teknolojisi</td>
-                <td>FDM (Fused Deposition Modeling)</td>
-              </tr>
-              <tr>
-                <td>Baskı Hacmi</td>
-                <td>220 x 220 x 250mm</td>
-              </tr>
-              <tr>
-                <td>Nozzle Çapı</td>
-                <td>0.4mm</td>
-              </tr>
-              <tr>
-                <td>Katman Kalınlığı</td>
-                <td>0.1-0.4mm</td>
-              </tr>
-              <tr>
-                <td>Baskı Hızı</td>
-                <td>≤180mm/s</td>
-              </tr>
-            </table>
-          </div>
-          <div class="tab-panel" id="reviews">
-            <h3>Müşteri Değerlendirmeleri</h3>
-            <div class="reviews-container">
-              <!-- Değerlendirmeler JavaScript ile yüklenecek -->
+            <div id="productSpecifications">
+              <!-- Teknik özellikler buraya dinamik olarak eklenecek -->
             </div>
+          </div>
+        </div>
+
+        <!-- Benzer Ürünler -->
+        <div class="similar-products">
+          <h3>Benzer Ürünler</h3>
+          <div class="similar-products-list" id="similarProducts">
+            <!-- Benzer ürünler buraya dinamik olarak eklenecek -->
           </div>
         </div>
       </div>
 
-      <!-- Related Products -->
-      <div class="related-products">
-        <h2>Benzer Ürünler</h2>
-        <div class="products-grid" id="relatedProducts">
-          <!-- Benzer ürünler JavaScript ile yüklenecek -->
+      <!-- Ürün Açıklaması -->
+      <div class="product-description-section">
+        <h3>Ürün Açıklaması</h3>
+        <div class="description-content" id="productDescription">
         </div>
       </div>
     </div>

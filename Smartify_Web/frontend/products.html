@@ -30,26 +30,35 @@
   <!-- Products Filters -->
   <section class="products-filters">
     <div class="container">
-      <div class="filters-grid">
+      <!-- Kategori Balonları -->
+      <div class="category-pills">
+        <button class="category-pill active" data-category="all">
+          <i class="fas fa-th-large"></i> Tümü
+        </button>
+        <button class="category-pill" data-category="SmartHome">
+          <i class="fas fa-home"></i> Akıllı Ev
+        </button>
+        <button class="category-pill" data-category="Electronics">
+          <i class="fas fa-microchip"></i> Elektronik
+        </button>
+        <button class="category-pill" data-category="HomeAutomation">
+          <i class="fas fa-cogs"></i> Ev Otomasyonu
+        </button>
+      </div>
+
+      <!-- Arama ve Filtreler -->
+      <div class="search-filters">
         <div class="search-box">
-          <i class="fas fa-search"></i>
           <input type="text" id="product-search" placeholder="Ürün ara...">
+          <button type="button" class="search-button">
+            <i class="fas fa-search"></i>
+          </button>
         </div>
-        <div class="filter-buttons">
-          <button class="filter-btn active" data-category="all">Tümü</button>
-          <button class="filter-btn" data-category="SmartHome">Akıllı Ev</button>
-          <button class="filter-btn" data-category="Electronics">Elektronik</button>
-          <button class="filter-btn" data-category="HomeAutomation">Ev Otomasyonu</button>
-        </div>
-        <div class="sort-options">
-          <select>
-            <option value="featured">Öne Çıkanlar</option>
-            <option value="price-low">Fiyat (Düşükten Yükseğe)</option>
-            <option value="price-high">Fiyat (Yüksekten Düşüğe)</option>
-            <option value="name-asc">İsim (A-Z)</option>
-            <option value="name-desc">İsim (Z-A)</option>
-          </select>
-        </div>
+      </div>
+
+      <!-- Aktif Filtreler -->
+      <div class="active-filters" id="activeFilters">
+        <!-- Aktif filtreler JavaScript ile eklenecek -->
       </div>
     </div>
   </section>
@@ -59,15 +68,6 @@
     <div class="container">
       <div class="products-container" id="productsContainer">
         <!-- Ürünler JavaScript ile yüklenecek -->
-      </div>
-      <div class="pagination">
-        <button class="page-btn"><i class="fas fa-chevron-left"></i></button>
-        <button class="page-btn active">1</button>
-        <button class="page-btn">2</button>
-        <button class="page-btn">3</button>
-        <span class="page-dots">...</span>
-        <button class="page-btn">10</button>
-        <button class="page-btn"><i class="fas fa-chevron-right"></i></button>
       </div>
     </div>
   </section>
@@ -85,7 +85,6 @@
         document.getElementById('navbar-container').innerHTML = navbarData;
         document.getElementById('footer-container').innerHTML = footerData;
         
-        // Bileşenler yüklendikten sonra main.js yüklendiğini bildir
         if (typeof updateHeader === 'function') {
           updateHeader();
           window.dispatchEvent(new Event('main_js_loaded'));

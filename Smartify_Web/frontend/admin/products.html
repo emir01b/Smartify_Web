@@ -3,106 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ürün Yönetimi - Smartify Admin</title>
+    <title>3D Tech Admin - Ürünler</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="../css/admin.css">
+    <style>
+        .image-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .preview-image-container {
+            width: 150px;
+            height: 150px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .preview-image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    </style>
 </head>
 <body>
-    <!-- Admin Header -->
-    <header class="admin-header">
-        <div class="container">
-            <div class="admin-header-content">
-                <div class="admin-logo">
-                    <a href="dashboard.html" class="logo-link">
-                        <h1><i class="fas fa-bolt"></i> Smartify Admin</h1>
-                    </a>
-                </div>
-                <nav class="admin-nav">
-                    <ul>
-                        <li><a href="dashboard.html"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a></li>
-                        <li><a href="products.html" class="active"><i class="fas fa-box"></i> <span>Ürünler</span></a></li>
-                        <li><a href="orders.html"><i class="fas fa-shopping-cart"></i> <span>Siparişler</span></a></li>
-                        <li><a href="settings.html"><i class="fas fa-cog"></i> <span>Ayarlar</span></a></li>
-                    </ul>
-                </nav>
-                <div class="admin-user">
-                    <div class="admin-user-info">
-                        <span class="admin-username">Admin</span>
-                        <span class="admin-role">Yönetici</span>
-                    </div>
-                    <div class="admin-actions">
-                        <a href="#" id="adminLogout" class="admin-logout" title="Çıkış Yap">
-                            <i class="fas fa-sign-out-alt"></i>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>3D Tech</h1>
+                <p>Admin Panel</p>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="/admin/dashboard.html">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Dashboard</span>
                         </a>
+                    </li>
+                    <li>
+                        <a href="/admin/orders.html">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span>Siparişler</span>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="/admin/products.html">
+                            <i class="fas fa-box"></i>
+                            <span>Ürünler</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="adminLogout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Çıkış Yap</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="admin-header">
+                <h1>Ürünler</h1>
+                <div class="admin-user">
+                    <div class="user-info">
+                        <span class="user-name">Admin</span>
+                        <span class="user-role">Yönetici</span>
+                    </div>
+                    <div class="user-avatar">
+                        <i class="fas fa-user-circle"></i>
                     </div>
                 </div>
-            </div>
-        </div>
-    </header>
+            </header>
 
-    <!-- Main Content -->
-    <main class="admin-main">
-        <div class="container">
-            <div class="page-header">
-                <h1 class="page-title">Ürün Yönetimi</h1>
-                <div class="breadcrumb">
-                    <a href="dashboard.html">Dashboard</a>
-                    <i class="fas fa-chevron-right"></i>
-                    <span>Ürünler</span>
-                </div>
-            </div>
-            
+            <!-- Products Content -->
             <div class="admin-content">
                 <div class="admin-content-header">
-                    <h2><i class="fas fa-box"></i> Ürün Listesi</h2>
-                    <button class="btn btn-primary" id="addProductBtn">
-                        <i class="fas fa-plus"></i> Yeni Ürün Ekle
+                    <h2><i class="fas fa-box"></i> Ürün Yönetimi</h2>
+                    <button id="addProductBtn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        Yeni Ürün Ekle
                     </button>
                 </div>
 
-                <!-- Ürün Filtreleme -->
+                <!-- Filters -->
                 <div class="admin-filters">
                     <div class="search-box">
-                        <input type="text" id="productSearch" placeholder="Ürün adı veya açıklama ara...">
                         <i class="fas fa-search"></i>
+                        <input type="text" id="productSearch" placeholder="Ürün ara...">
                     </div>
                     <div class="filter-group">
-                        <select id="categoryFilter">
+                        <select id="categoryFilter" class="form-select">
                             <option value="">Tüm Kategoriler</option>
                             <!-- Kategoriler JavaScript ile yüklenecek -->
                         </select>
                     </div>
                 </div>
 
-                <!-- Ürün Tablosu -->
-                <div class="admin-table-container">
-                    <table class="admin-table">
+                <!-- Products Table -->
+                <div class="table-container">
+                    <table class="data-table">
                         <thead>
                             <tr>
-                                <th width="80">Resim</th>
+                                <th>Görsel</th>
                                 <th>Ürün Adı</th>
                                 <th>Kategori</th>
-                                <th width="100">Fiyat</th>
-                                <th width="80">Stok</th>
-                                <th width="150">Durum</th>
-                                <th width="100">İşlemler</th>
+                                <th>Fiyat</th>
+                                <th>Stok</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
                             </tr>
                         </thead>
                         <tbody id="productsTableBody">
-                            <!-- Ürünler JavaScript ile yüklenecek -->
                             <tr>
-                                <td colspan="7" class="no-data">Ürünler yükleniyor...</td>
+                                <td colspan="7" class="loading">Ürünler yükleniyor...</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-            </div>
-        </div>
-    </main>
 
-    <!-- Ürün Ekleme/Düzenleme Modal -->
-    <div class="modal" id="productModal">
+                <!-- Pagination -->
+                <div class="pagination" id="productsPagination">
+                    <!-- Sayfalama buraya gelecek -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Product Modal -->
+    <div id="productModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="modalTitle"><i class="fas fa-plus-circle"></i> Yeni Ürün Ekle</h3>
@@ -158,8 +194,8 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="productImage">Ürün Görseli</label>
-                        <input type="file" id="productImage" name="images" accept="image/*">
+                        <label for="productImage">Ürün Görselleri (Birden fazla seçebilirsiniz)</label>
+                        <input type="file" id="productImage" name="images" accept="image/*" multiple>
                         <div id="imagePreview" class="image-preview"></div>
                     </div>
 

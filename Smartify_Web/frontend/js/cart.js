@@ -19,14 +19,25 @@ const cart = {
   
   // Sepetten ürün çıkar
   removeItem(productId) {
+    console.log('Ürün siliniyor:', productId); // Debug için eklendi
+    
     // Ürün adını alabilmek için önce ürünü bul
     const removedItem = this.items.find(item => item._id === productId);
     const itemName = removedItem ? removedItem.name : 'Ürün';
     
+    // Ürünü sepetten çıkar
     this.items = this.items.filter(item => item._id !== productId);
+    
+    // LocalStorage'ı güncelle
     this.saveCart();
+    
+    // UI'ı güncelle
     this.updateUI();
+    
+    // Bildirim göster
     showToast(`${itemName} sepetten çıkarıldı`, 'warning');
+    
+    console.log('Güncel sepet:', this.items); // Debug için eklendi
   },
   
   // Ürün miktarını güncelle
@@ -94,7 +105,7 @@ const cart = {
         </td>
         <td>₺${(item.price * item.quantity).toFixed(2)}</td>
         <td>
-          <button class="remove-btn" data-id="${item._id}">
+          <button class="remove-btn" data-id="${item._id}" onclick="cart.removeItem('${item._id}')">
             <i class="fas fa-trash"></i>
           </button>
         </td>
@@ -146,14 +157,6 @@ const cart = {
   
   // Event listener'ları ekle
   addEventListeners() {
-    // Ürün silme
-    document.querySelectorAll('.remove-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const productId = btn.dataset.id;
-        this.removeItem(productId);
-      });
-    });
-    
     // Miktar güncelleme
     document.querySelectorAll('.quantity-selector input').forEach(input => {
       input.addEventListener('change', () => {
@@ -198,32 +201,6 @@ const cart = {
         } else {
           showToast('Geçersiz kupon kodu', 'error');
         }
-      });
-    }
-    
-    // Ödemeye geç butonu
-    const checkoutBtn = document.querySelector('.checkout-btn');
-    if (checkoutBtn) {
-      checkoutBtn.addEventListener('click', () => {
-        if (this.items.length === 0) {
-          showToast('Sepetinizde ürün bulunmamaktadır', 'warning');
-          return;
-        }
-        
-        // Eğer kullanıcı giriş yapmamışsa login sayfasına yönlendir
-        const user = getCurrentUser();
-        if (!user) {
-          showToast('Ödeme yapmak için giriş yapmalısınız', 'warning');
-          setTimeout(() => {
-            window.location.href = 'login.html?redirect=cart';
-          }, 1500);
-          return;
-        }
-        
-        // Ödeme sayfasına yönlendir
-        showToast('Ödeme sayfasına yönlendiriliyorsunuz', 'success');
-        // Burada ödeme sayfası hazır olduğunda aşağıdaki kodu aktif edin
-        // window.location.href = 'checkout.html';
       });
     }
   }

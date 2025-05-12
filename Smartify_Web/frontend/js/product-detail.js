@@ -82,9 +82,14 @@ const initTabs = () => {
 
 // Miktar seçici işlemleri
 const initQuantitySelector = () => {
-  const minusBtn = document.querySelector('.minus-btn');
-  const plusBtn = document.querySelector('.plus-btn');
+  const minusBtn = document.querySelector('.qty-btn.minus');
+  const plusBtn = document.querySelector('.qty-btn.plus');
   const quantityInput = document.getElementById('quantity');
+  
+  if (!minusBtn || !plusBtn || !quantityInput) {
+    console.log('Miktar seçici elemanları bulunamadı');
+    return;
+  }
   
   minusBtn.addEventListener('click', () => {
     const currentValue = parseInt(quantityInput.value);
@@ -95,7 +100,7 @@ const initQuantitySelector = () => {
   
   plusBtn.addEventListener('click', () => {
     const currentValue = parseInt(quantityInput.value);
-    const maxValue = parseInt(quantityInput.max);
+    const maxValue = parseInt(quantityInput.max) || 10;
     if (currentValue < maxValue) {
       quantityInput.value = currentValue + 1;
     }
@@ -104,25 +109,306 @@ const initQuantitySelector = () => {
 
 // Sepete ekle
 const initAddToCart = () => {
-  const addToCartBtn = document.getElementById('add-to-cart');
-  
-  addToCartBtn.addEventListener('click', async () => {
-    const productId = new URLSearchParams(window.location.search).get('id');
-    const quantity = parseInt(document.getElementById('quantity').value);
+    const addToCartBtn = document.getElementById('addToCartBtn');
     
-    try {
-      const product = await getProductDetails(productId);
-      cart.addItem(product, quantity);
-    } catch (error) {
-      showToast(error.message, 'error');
+    if (!addToCartBtn) {
+        console.log('Sepete ekle butonu bulunamadı');
+        return;
     }
-  });
+    
+    addToCartBtn.addEventListener('click', async () => {
+        try {
+            const productId = new URLSearchParams(window.location.search).get('id');
+            const quantity = parseInt(document.getElementById('quantity')?.value || 1);
+            
+            // Sepete ekleme işlemi başladığında butonu devre dışı bırak
+            addToCartBtn.disabled = true;
+            addToCartBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ekleniyor...';
+            
+            const response = await fetch(`/api/products/${productId}`);
+            if (!response.ok) {
+                throw new Error('Ürün bilgileri alınamadı');
+            }
+            
+            const product = await response.json();
+            
+            // Sepete ekle
+            if (typeof cart !== 'undefined' && cart.addItem) {
+                await cart.addItem(product, quantity);
+                showNotification('Ürün sepete eklendi', 'success');
+            } else {
+                // Local storage'a ekle
+                const cartItems = JSON.parse(localStorage.getItem('cart') || '[]');
+                cartItems.push({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    quantity: quantity,
+                    image: product.image || product.images?.[0] || '/images/default-product.png'
+                });
+                localStorage.setItem('cart', JSON.stringify(cartItems));
+                showNotification('Ürün sepete eklendi', 'success');
+            }
+        } catch (error) {
+            console.error('Sepete eklerken hata:', error);
+            showNotification('Ürün sepete eklenirken bir hata oluştu', 'error');
+        } finally {
+            // İşlem bittiğinde butonu tekrar aktif et
+            if (addToCartBtn) {
+                addToCartBtn.disabled = false;
+                addToCartBtn.innerHTML = '<i class="fas fa-shopping-cart"></i> Sepete Ekle';
+            }
+        }
+    });
 };
 
+// Ürün detaylarını yükle
+async function loadProductDetails() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('id');
+    
+    if (!productId) {
+        window.location.href = '/products.html';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/products/${productId}`);
+        const product = await response.json();
+        
+        // Sayfa başlığını güncelle
+        document.title = `${product.name} - Smartify`;
+        
+        // Kategori yolunu oluştur ve göster
+        const categoryPath = document.getElementById('categoryPath');
+        if (product.categoryPath && product.categoryPath.length > 0) {
+            const pathHtml = product.categoryPath.map((category, index) => {
+                const isLast = index === product.categoryPath.length - 1;
+                if (isLast) {
+                    return `<span>${category}</span>`;
+                }
+                return `<a href="/products.html?category=${encodeURIComponent(category)}">${category}</a>`;
+            }).join('<span class="separator">/</span>');
+            
+            categoryPath.innerHTML = `
+                <a href="/products.html">Tüm Ürünler</a>
+                <span class="separator">/</span>
+                ${pathHtml}
+            `;
+        }
+        
+        // Ana başlık ve diğer detayları güncelle
+        document.getElementById('productTitle').textContent = product.name;
+        document.getElementById('productDescription').textContent = product.description;
+        document.getElementById('productPrice').textContent = `${product.price.toFixed(2)} ₺`;
+        
+        // Stok durumunu güncelle
+        const stockStatus = document.getElementById('stockStatus');
+        if (product.stock > 0) {
+            stockStatus.classList.add('in-stock');
+            stockStatus.querySelector('span').textContent = 'Stokta';
+            document.getElementById('quantity').max = Math.min(product.stock, 10);
+            document.getElementById('addToCartBtn').disabled = false;
+        } else {
+            stockStatus.classList.add('out-of-stock');
+            stockStatus.querySelector('span').textContent = 'Stokta Yok';
+            document.getElementById('addToCartBtn').disabled = true;
+        }
+        
+        // Özellikleri listele
+        const featuresList = document.getElementById('productFeatures');
+        featuresList.innerHTML = '';
+        if (product.features && product.features.length > 0) {
+            product.features.forEach(feature => {
+                const li = document.createElement('li');
+                li.innerHTML = `<i class="fas fa-check"></i> ${feature}`;
+                featuresList.appendChild(li);
+            });
+        }
+        
+        // Teknik özellikleri listele
+        const specificationsDiv = document.getElementById('productSpecifications');
+        specificationsDiv.innerHTML = '';
+        if (product.specifications) {
+            const table = document.createElement('table');
+            table.className = 'specs-table';
+            
+            for (const [key, value] of Object.entries(product.specifications)) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${key}</td>
+                    <td>${value}</td>
+                `;
+                table.appendChild(row);
+            }
+            
+            specificationsDiv.appendChild(table);
+        }
+        
+        // Resimleri yükle
+        const mainImage = document.getElementById('mainImage');
+        const thumbnailContainer = document.getElementById('thumbnailContainer');
+        
+        // Varsayılan resmi ayarla
+        if (product.images && product.images.length > 0) {
+            mainImage.src = product.images[0];
+            mainImage.alt = product.name;
+            
+            // Küçük resimleri oluştur
+            thumbnailContainer.innerHTML = '';
+            product.images.forEach((image, index) => {
+                const thumbnail = document.createElement('img');
+                thumbnail.src = image;
+                thumbnail.alt = `${product.name} Thumbnail ${index + 1}`;
+                thumbnail.className = index === 0 ? 'active' : '';
+                
+                thumbnail.addEventListener('click', () => {
+                    // Tüm thumbnail'ların active sınıfını kaldır
+                    thumbnailContainer.querySelectorAll('img').forEach(img => img.classList.remove('active'));
+                    // Tıklanan thumbnail'a active sınıfı ekle
+                    thumbnail.classList.add('active');
+                    // Ana resmi güncelle
+                    mainImage.src = image;
+                });
+                
+                thumbnailContainer.appendChild(thumbnail);
+            });
+        } else {
+            // Varsayılan resim
+            mainImage.src = '/images/default-product.png';
+            mainImage.alt = product.name;
+        }
+        
+    } catch (error) {
+        console.error('Ürün detayları yüklenirken hata:', error);
+        showNotification('Ürün detayları yüklenirken bir hata oluştu', 'error');
+        // Hata durumunda ana sayfaya yönlendir
+        window.location.href = '/products.html';
+    }
+}
+
+// Bildirim göster
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+        <p>${message}</p>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // 3 saniye sonra bildirimi kaldır
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// Benzer ürünleri yükle
+async function loadSimilarProducts(categoryId, currentProductId) {
+    try {
+        console.log('Benzer ürünler yükleniyor:', { categoryId, currentProductId });
+        
+        // API çağrısını düzelt
+        const response = await fetch(`/api/products?category=${categoryId}`);
+        if (!response.ok) {
+            throw new Error(`API yanıt hatası: ${response.status}`);
+        }
+        
+        const products = await response.json();
+        console.log('API yanıtı:', products);
+        
+        const similarProductsContainer = document.getElementById('similarProducts');
+        similarProductsContainer.innerHTML = '';
+        
+        // Mevcut ürünü filtrele ve 4 ürün al
+        const similarProducts = products
+            .filter(product => product.id !== currentProductId)
+            .slice(0, 4);
+        
+        if (similarProducts.length === 0) {
+            console.log('Ürün bulunamadı');
+            similarProductsContainer.innerHTML = '<p class="no-similar">Bu kategoride başka ürün bulunmuyor</p>';
+            return;
+        }
+        
+        similarProducts.forEach(product => {
+            if (!product) return; // Null kontrolü
+            
+            const productElement = document.createElement('div');
+            productElement.className = 'similar-product-item';
+            
+            // Resim URL'si kontrolü ve varsayılan değer
+            let imageUrl = '/images/default-product.png';
+            if (product.image) {
+                imageUrl = product.image;
+            } else if (product.images && product.images.length > 0) {
+                imageUrl = product.images[0];
+            }
+            
+            productElement.innerHTML = `
+                <img src="${imageUrl}" alt="${product.name}" 
+                     onerror="this.src='/images/default-product.png'">
+                <h4>${product.name}</h4>
+                <span class="price">${formatPrice(product.price)}</span>
+            `;
+            
+            // Ürüne tıklandığında detay sayfasına yönlendir
+            productElement.addEventListener('click', () => {
+                window.location.href = `/product-detail.html?id=${product.id}`;
+            });
+            
+            similarProductsContainer.appendChild(productElement);
+        });
+    } catch (error) {
+        console.error('Benzer ürünler yüklenirken hata oluştu:', error);
+        document.getElementById('similarProducts').innerHTML = 
+            '<p class="error-message">Benzer ürünler yüklenirken bir hata oluştu</p>';
+    }
+}
+
+// Fiyat formatla
+function formatPrice(price) {
+    return new Intl.NumberFormat('tr-TR', {
+        style: 'currency',
+        currency: 'TRY'
+    }).format(price);
+}
+
 // Sayfa yüklendiğinde
-document.addEventListener('DOMContentLoaded', () => {
-  displayProductDetails();
-  initTabs();
-  initQuantitySelector();
-  initAddToCart();
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+        
+        if (!productId) {
+            window.location.href = '/products.html';
+            return;
+        }
+        
+        // Önce ürün detaylarını yükle
+        const productResponse = await fetch(`/api/products/${productId}`);
+        if (!productResponse.ok) {
+            throw new Error('Ürün detayları yüklenemedi');
+        }
+        
+        const product = await productResponse.json();
+        console.log('Ürün detayları:', product);
+        
+        // Ürün detaylarını göster
+        await loadProductDetails();
+        
+        // Benzer ürünleri yükle (eğer kategori ID'si varsa)
+        if (product.categoryId || product.category) {
+            await loadSimilarProducts(product.categoryId || product.category, productId);
+        }
+        
+        // Diğer başlangıç işlemleri
+        initQuantitySelector();
+        initAddToCart();
+        
+    } catch (error) {
+        console.error('Sayfa yüklenirken hata:', error);
+        showNotification('Bir hata oluştu', 'error');
+    }
 });

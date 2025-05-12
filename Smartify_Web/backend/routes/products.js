@@ -179,9 +179,16 @@ router.put('/:id', authenticateToken, upload.array('images', 5), async (req, res
             productData.images = req.files.map(file => `/uploads/${file.filename}`);
             console.log('Yüklenen resimler:', productData.images);
         } else {
-            // Eğer resim yüklenmemişse varsayılan resmi kullan
-            productData.images = ['/images/default-product.png'];
-            console.log('Varsayılan resim kullanılıyor');
+            // Eğer yeni resim yüklenmemişse, mevcut resimleri koru
+            const existingProduct = await Product.findById(req.params.id);
+            if (existingProduct && existingProduct.images && existingProduct.images.length > 0) {
+                productData.images = existingProduct.images;
+                console.log('Mevcut resimler korunuyor:', productData.images);
+            } else {
+                // Eğer mevcut ürünün resmi yoksa varsayılan resmi kullan
+                productData.images = ['/images/default-product.png'];
+                console.log('Varsayılan resim kullanılıyor');
+            }
         }
 
         const product = await Product.findByIdAndUpdate(
