@@ -80,10 +80,10 @@ Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.
 
 ## 📞 İletişim
 
-Proje sorumlusu: [mail@example.com](mailto:mail@example.com)
+Proje sorumlusu: [mail@example.com](mailto:emirgdogduu@gmail.com)
 
 ---
 
 <div align="center">
-  <p>© 2023 Smartify. Tüm hakları saklıdır.</p>
+  <p>© 2025 Smartify. Tüm hakları saklıdır.</p>
 </div>
