@@ -74,10 +74,6 @@ Her bileşenin kendi dizinindeki README dosyasında detaylı kurulum talimatlar�
 4. Dalınıza push yapın (`git push origin feature/amazing-feature`)
 5. Pull Request açın
 
-## 📄 Lisans
-
-Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.
-
 ## 📞 İletişim
 
 Proje sorumlusu: [emirgdogduu@gmail.com](mailto:emirgdogduu@gmail.com)
