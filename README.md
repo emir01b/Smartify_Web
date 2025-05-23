@@ -80,7 +80,7 @@ Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.
 
 ## 📞 İletişim
 
-Proje sorumlusu: [mail@example.com](mailto:emirgdogduu@gmail.com)
+Proje sorumlusu: [emirgdogduu@gmail.com](mailto:emirgdogduu@gmail.com)
 
 ---
 
