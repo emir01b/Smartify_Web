@@ -9,8 +9,8 @@ class DataConverters {
     private val gson = Gson()
     
     @TypeConverter
-    fun fromStringList(value: List<String>?): String {
-        return gson.toJson(value ?: emptyList<String>())
+    fun fromStringList(value: List<String>): String {
+        return gson.toJson(value)
     }
     
     @TypeConverter
@@ -20,12 +20,12 @@ class DataConverters {
     }
     
     @TypeConverter
-    fun fromMap(value: Map<String, String>?): String {
-        return gson.toJson(value ?: emptyMap<String, String>())
+    fun fromStringMap(value: Map<String, String>): String {
+        return gson.toJson(value)
     }
     
     @TypeConverter
-    fun toMap(value: String): Map<String, String> {
+    fun toStringMap(value: String): Map<String, String> {
         val mapType = object : TypeToken<Map<String, String>>() {}.type
         return gson.fromJson(value, mapType) ?: emptyMap()
     }

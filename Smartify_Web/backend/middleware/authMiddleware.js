@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/userModel');
+const User = require('../models/User');
 
 // Kullanıcı kimlik doğrulama
 const protect = async (req, res, next) => {
@@ -12,21 +12,28 @@ const protect = async (req, res, next) => {
     try {
       token = req.headers.authorization.split(' ')[1];
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'smartify-jwt-secret');
+      
+      // Decoded token içindeki id veya userId'yi kullan
+      const userId = decoded.userId || decoded.id;
+      
+      if (!userId) {
+        throw new Error('Token içerisinde kullanıcı kimliği bulunamadı');
+      }
 
-      req.user = await User.findById(decoded.id).select('-password');
+      req.user = await User.findById(userId).select('-password');
+      
+      if (!req.user) {
+        throw new Error('Kullanıcı bulunamadı');
+      }
 
       next();
     } catch (error) {
-      console.error(error);
-      res.status(401);
-      throw new Error('Yetkilendirme başarısız, token geçersiz');
+      console.error('Token doğrulama hatası:', error.message);
+      res.status(401).json({ message: 'Yetkilendirme başarısız, token geçersiz' });
     }
-  }
-
-  if (!token) {
-    res.status(401);
-    throw new Error('Yetkilendirme başarısız, token bulunamadı');
+  } else if (!token) {
+    res.status(401).json({ message: 'Yetkilendirme başarısız, token bulunamadı' });
   }
 };
 
@@ -35,8 +42,7 @@ const admin = (req, res, next) => {
   if (req.user && req.user.isAdmin) {
     next();
   } else {
-    res.status(401);
-    throw new Error('Yetkilendirme başarısız, admin değilsiniz');
+    res.status(401).json({ message: 'Yetkilendirme başarısız, admin değilsiniz' });
   }
 };
 

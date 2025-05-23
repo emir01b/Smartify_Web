@@ -5,7 +5,6 @@ import androidx.room.Room
 import com.example.smartify.data.local.AppDatabase
 import com.example.smartify.data.local.dao.CartDao
 import com.example.smartify.data.local.dao.ProductDao
-import com.example.smartify.data.local.dao.WishlistDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -39,11 +38,5 @@ object DatabaseModule {
     @Singleton
     fun provideCartDao(appDatabase: AppDatabase): CartDao {
         return appDatabase.cartDao()
-    }
-
-    @Provides
-    @Singleton
-    fun provideWishlistDao(appDatabase: AppDatabase): WishlistDao {
-        return appDatabase.wishlistDao()
     }
 } 

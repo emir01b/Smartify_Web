@@ -39,7 +39,47 @@ function setupEventListeners() {
 // Siparişleri yükle
 async function loadOrders() {
     try {
-        const result = await fetchAPI('/api/orders');
+        console.log('Siparişleri yükleme isteği yapılıyor...');
+        const baseUrl = 'http://localhost:3000/api';
+        const token = localStorage.getItem('adminToken');
+        
+        if (!token) {
+            console.error('Token bulunamadı, login sayfasına yönlendiriliyor');
+            window.location.href = '/admin/login.html?expired=true';
+            return;
+        }
+        
+        const response = await fetch(`${baseUrl}/orders`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                console.error('Yetkisiz erişim (401), token geçersiz');
+                localStorage.removeItem('adminToken');
+                localStorage.removeItem('lastAuthCheck');
+                window.location.href = '/admin/login.html?expired=true';
+                return;
+            }
+            const errorText = await response.text();
+            console.error('API hata yanıtı:', errorText);
+            throw new Error('Siparişler yüklenemedi: ' + response.status);
+        }
+        
+        let result;
+        try {
+            const text = await response.text();
+            console.log('API yanıtı:', text.substring(0, 100) + '...');
+            result = JSON.parse(text);
+        } catch (error) {
+            console.error('JSON parse hatası:', error);
+            throw new Error('API yanıtı geçerli JSON formatında değil');
+        }
         
         if (!result) return;
         
@@ -50,7 +90,7 @@ async function loadOrders() {
         displayOrders();
     } catch (error) {
         console.error('Siparişleri yükleme hatası:', error);
-        showNotification('Siparişler yüklenirken bir hata oluştu', 'error');
+        showNotification('Siparişler yüklenirken bir hata oluştu: ' + error.message, 'error');
     }
 }
 
@@ -224,7 +264,7 @@ function filterOrders() {
 async function openOrderDetail(orderId) {
     try {
         // Sipariş verilerini getir
-        const order = await fetchAPI(`/api/orders/${orderId}`);
+        const order = await fetchAPI(`/orders/${orderId}`);
         
         if (!order) return;
         
@@ -323,7 +363,13 @@ async function updateOrderStatus() {
     const newStatus = document.getElementById('orderStatusUpdate').value;
     
     try {
-        const result = await fetchAPI(`/api/orders/${currentOrder._id}/status`, 'PUT', { status: newStatus });
+        const result = await fetchAPI(`/orders/${currentOrder._id}/status`, {
+            method: 'PUT', 
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: newStatus })
+        });
         
         if (!result) return;
         
@@ -363,10 +409,21 @@ async function updateOrderStatus() {
 
 // Siparişi ödendi olarak işaretle
 async function markOrderAsPaid() {
-    if (!currentOrder) return;
+    if (!currentOrder || currentOrder.isPaid) return;
     
     try {
-        const result = await fetchAPI(`/api/orders/${currentOrder._id}/pay`, 'PUT');
+        const result = await fetchAPI(`/orders/${currentOrder._id}/pay`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: Date.now().toString(),
+                status: 'COMPLETED',
+                update_time: new Date().toISOString(),
+                payer: { email_address: currentOrder.shippingAddress.email }
+            })
+        });
         
         if (!result) return;
         
@@ -391,8 +448,10 @@ async function markOrderAsPaid() {
         displayOrders();
         
         // Detay modalını güncelle
-        document.getElementById('paymentStatusDetail').textContent = 'Ödendi';
-        document.getElementById('paidAtDetail').textContent = `Ödeme Tarihi: ${formatDate(new Date())}`;
+        document.getElementById('paymentStatusDetail').innerHTML = `<span class="status-badge success">Ödendi</span>`;
+        document.getElementById('paidAtDetail').innerHTML = `<strong>Ödeme Tarihi:</strong> ${formatDate(new Date())}`;
+        
+        // Butonu gizle
         document.getElementById('markAsPaidBtn').style.display = 'none';
         
         // Güncel siparişi kaydet
@@ -408,10 +467,16 @@ async function markOrderAsPaid() {
 async function saveOrderNotes() {
     if (!currentOrder) return;
     
-    const notes = document.getElementById('orderNotesDetail').value;
+    const notes = document.getElementById('orderNotesDetail').value.trim();
     
     try {
-        const result = await fetchAPI(`/api/orders/${currentOrder._id}/notes`, 'PUT', { notes });
+        const result = await fetchAPI(`/orders/${currentOrder._id}/notes`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ notes })
+        });
         
         if (!result) return;
         
@@ -421,7 +486,7 @@ async function saveOrderNotes() {
         // Güncel siparişi kaydet
         currentOrder.notes = notes;
     } catch (error) {
-        console.error('Not kaydetme hatası:', error);
-        showNotification('Notlar kaydedilirken bir hata oluştu', 'error');
+        console.error('Sipariş notları kaydetme hatası:', error);
+        showNotification('Sipariş notları kaydedilirken bir hata oluştu', 'error');
     }
 } 

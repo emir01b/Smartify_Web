@@ -375,6 +375,116 @@ function formatPrice(price) {
     }).format(price);
 }
 
+// Favorilere ekle butonu
+const initAddToFavorites = () => {
+    const addToFavoritesBtn = document.getElementById('addToFavoritesBtn');
+    
+    if (!addToFavoritesBtn) {
+        console.log('Favorilere ekle butonu bulunamadı');
+        return;
+    }
+    
+    const productId = new URLSearchParams(window.location.search).get('id');
+    
+    // Kullanıcı giriş yapmış mı ve bu ürün favorilerde mi kontrol et
+    checkFavoriteStatus(productId, addToFavoritesBtn);
+    
+    addToFavoritesBtn.addEventListener('click', async () => {
+        try {
+            const token = localStorage.getItem('token');
+            
+            // Eğer kullanıcı giriş yapmamışsa, giriş sayfasına yönlendir
+            if (!token) {
+                window.location.href = `login.html?redirect=product-detail.html?id=${productId}`;
+                return;
+            }
+            
+            const isInFavorites = addToFavoritesBtn.classList.contains('active');
+            let response;
+            
+            if (isInFavorites) {
+                // Favorilerden çıkar
+                response = await fetch(`http://localhost:3000/api/users/favorites/${productId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    addToFavoritesBtn.classList.remove('active');
+                    addToFavoritesBtn.querySelector('i').className = 'far fa-heart';
+                    addToFavoritesBtn.querySelector('i').nextSibling.textContent = ' Favorilere Ekle';
+                    showNotification('Ürün favorilerden çıkarıldı', 'info');
+                }
+            } else {
+                // Favorilere ekle
+                response = await fetch(`http://localhost:3000/api/users/favorites/${productId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    addToFavoritesBtn.classList.add('active');
+                    addToFavoritesBtn.querySelector('i').className = 'fas fa-heart';
+                    addToFavoritesBtn.querySelector('i').nextSibling.textContent = ' Favorilerden Çıkar';
+                    showNotification('Ürün favorilere eklendi', 'success');
+                }
+            }
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'İşlem sırasında bir hata oluştu');
+            }
+        } catch (error) {
+            console.error('Favorilere ekleme hatası:', error);
+            showNotification(error.message || 'İşlem sırasında bir hata oluştu', 'error');
+        }
+    });
+};
+
+// Ürünün favori durumunu kontrol et
+const checkFavoriteStatus = async (productId, button) => {
+    try {
+        const token = localStorage.getItem('token');
+        
+        // Kullanıcı giriş yapmamışsa favori durumunu kontrol etmeye gerek yok
+        if (!token) {
+            return;
+        }
+        
+        // Favorileri getir
+        const response = await fetch('http://localhost:3000/api/users/favorites', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Favori durumu kontrol edilemedi');
+        }
+        
+        const favorites = await response.json();
+        
+        // Bu ürün favorilerde mi kontrol et
+        const isInFavorites = favorites.some(fav => fav._id === productId);
+        
+        if (isInFavorites) {
+            button.classList.add('active');
+            button.querySelector('i').className = 'fas fa-heart';
+            button.querySelector('i').nextSibling.textContent = ' Favorilerden Çıkar';
+        }
+    } catch (error) {
+        console.error('Favori durumu kontrol hatası:', error);
+    }
+};
+
 // Sayfa yüklendiğinde
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -406,9 +516,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Diğer başlangıç işlemleri
         initQuantitySelector();
         initAddToCart();
+        initAddToFavorites();
         
     } catch (error) {
         console.error('Sayfa yüklenirken hata:', error);
-        showNotification('Bir hata oluştu', 'error');
+        showNotification('Ürün detayları yüklenirken bir hata oluştu', 'error');
     }
 });

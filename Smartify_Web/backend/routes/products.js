@@ -1,14 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
-const upload = require('../middleware/upload');
+const { upload, handleUpload } = require('../middleware/upload');
 const { authenticateToken } = require('../middleware/auth');
+const mongoose = require('mongoose');
 
 // Tüm ürünleri getir - Herkese açık
 router.get('/', async (req, res, next) => {
     try {
         console.log('Ürünler isteniyor, query:', req.query);
-        const { search, category, mainCategory, isPopular, sort } = req.query;
+        const { search, category, mainCategory, isPopular, isNew, sort } = req.query;
         let query = {};
 
         // Arama filtresi
@@ -30,6 +31,11 @@ router.get('/', async (req, res, next) => {
         if (isPopular === 'true') {
             query.isPopular = true;
         }
+        
+        // Yeni ürünler filtresi
+        if (isNew === 'true') {
+            query.isNew = true;
+        }
 
         // Sıralama seçenekleri
         let sortOption = {};
@@ -41,12 +47,73 @@ router.get('/', async (req, res, next) => {
         if (Object.keys(sortOption).length === 0) sortOption.createdAt = -1; // Varsayılan sıralama
 
         console.log('MongoDB sorgusu:', query, 'Sıralama:', sortOption);
-        const products = await Product.find(query).sort(sortOption);
+        
+        // Veritabanı bağlantı durumunu doğrula
+        if (!mongoose.connection.readyState) {
+            console.error('MongoDB bağlantısı kesik durumda, yeniden bağlanmaya çalışılıyor...');
+            await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://3delektronik01:8MERF3SJhLFZMBno@3d-elektronik-db.se3vs.mongodb.net/smartify');
+        }
+        
+        // Kategori kontrolü yap
+        let productCount = 0;
+        try {
+            productCount = await Product.countDocuments(query);
+            console.log(`"${category || mainCategory}" sorgusu için ${productCount} ürün bulundu`);
+
+            // Eğer hiç ürün bulunamazsa kategoriler arasında eşleşme sorununu kontrol et
+            if (productCount === 0 && (category || mainCategory)) {
+                console.log('Ürün bulunamadı, alternatif kategorileri deniyorum...');
+                
+                // SmartHomeSystem ve SmartHome tutarsızlıklarını kontrol et
+                if (category === 'SmartHome') {
+                    const altQuery = { ...query, category: 'SmartHomeSystem' };
+                    const altCount = await Product.countDocuments(altQuery);
+                    
+                    if (altCount > 0) {
+                        console.log(`Alternatif kategori bulundu: SmartHomeSystem (${altCount} ürün)`);
+                        query.category = 'SmartHomeSystem';
+                        productCount = altCount;
+                    }
+                } else if (category === 'SmartHomeSystem') {
+                    const altQuery = { ...query, category: 'SmartHome' };
+                    const altCount = await Product.countDocuments(altQuery);
+                    
+                    if (altCount > 0) {
+                        console.log(`Alternatif kategori bulundu: SmartHome (${altCount} ürün)`);
+                        query.category = 'SmartHome';
+                        productCount = altCount;
+                    }
+                }
+            }
+        } catch (countError) {
+            console.error('Ürün sayımında hata:', countError);
+        }
+        
+        // Veritabanı sorgusu - zaman aşımına karşı önlem
+        const products = await Promise.race([
+            Product.find(query).sort(sortOption),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Veritabanı sorgusu zaman aşımına uğradı')), 15000)
+            )
+        ]);
+        
         console.log(`${products.length} ürün bulundu`);
+        
+        // Ürün bulunamadıysa boş array ile yanıt ver
+        if (!products || products.length === 0) {
+            console.log(`'${category || mainCategory}' kategorisinde ürün bulunamadı.`);
+            return res.json([]);
+        }
         
         res.json(products);
     } catch (error) {
         console.error('Ürünleri getirme hatası:', error);
+        // Kritik hatalar dışında 500 yerine boş dizi döndür
+        if (error.name === 'MongooseServerSelectionError' || 
+            error.message === 'Veritabanı sorgusu zaman aşımına uğradı') {
+            console.error('Veritabanı bağlantı hatası. Boş dizi döndürülüyor.');
+            return res.json([]);
+        }
         next(error);
     }
 });
@@ -68,9 +135,32 @@ router.get('/:id', async (req, res, next) => {
 });
 
 // Yeni ürün ekle - Sadece admin
-router.post('/', authenticateToken, upload.array('images', 5), async (req, res, next) => {
+router.post('/', authenticateToken, handleUpload, async (req, res, next) => {
     try {
-        console.log('Yeni ürün ekleniyor:', req.body);
+        console.log('Yeni ürün ekleniyor...');
+        console.log('Form verileri:', req.body);
+        console.log('Yüklenen dosya sayısı:', req.files ? req.files.length : 0);
+        
+        const { name, description, price, stock, category, mainCategory } = req.body;
+        
+        // Aynı isme sahip ürün var mı kontrol et
+        const existingProduct = await Product.findOne({ name: name });
+        if (existingProduct) {
+            console.log('UYARI: Aynı isimle ürün zaten mevcut:', existingProduct._id);
+            
+            // Son 10 saniye içinde oluşturulmuş mu? (çift gönderim kontrolü)
+            const now = new Date();
+            const createdAt = new Date(existingProduct.createdAt);
+            const timeDiff = (now - createdAt) / 1000; // saniye cinsinden
+            
+            if (timeDiff < 10) {
+                console.log('Çift gönderim tespit edildi! Geçen süre:', timeDiff, 'saniye');
+                return res.status(409).json({ 
+                    message: 'Bu ürün zaten eklenmiş. Lütfen sayfayı yenileyip tekrar deneyin.',
+                    existingProductId: existingProduct._id
+                });
+            }
+        }
         
         // Form verilerini işle
         const productData = {
@@ -104,9 +194,15 @@ router.post('/', authenticateToken, upload.array('images', 5), async (req, res, 
 
         // Özellikler
         if (req.body.features) {
-            const featuresText = req.body.features.trim();
-            if (featuresText) {
-                productData.features = featuresText.split('\n').filter(f => f.trim());
+            try {
+                productData.features = JSON.parse(req.body.features);
+            } catch (e) {
+                console.error('features parse hatası:', e);
+                // Metin olarak gelmiş olabilir, satırlara ayır
+                const featuresText = req.body.features.trim();
+                if (featuresText) {
+                    productData.features = featuresText.split('\n').filter(f => f.trim());
+                }
             }
         }
 
@@ -132,9 +228,18 @@ router.post('/', authenticateToken, upload.array('images', 5), async (req, res, 
 });
 
 // Ürün güncelle - Sadece admin
-router.put('/:id', authenticateToken, upload.array('images', 5), async (req, res, next) => {
+router.put('/:id', authenticateToken, handleUpload, async (req, res, next) => {
     try {
-        console.log('Ürün güncelleniyor:', req.params.id, req.body);
+        console.log('Ürün güncelleniyor...');
+        console.log('Ürün ID:', req.params.id);
+        console.log('Form verileri:', req.body);
+        console.log('Yüklenen dosya sayısı:', req.files ? req.files.length : 0);
+        
+        // Ürünün var olup olmadığını kontrol et
+        const existingProduct = await Product.findById(req.params.id);
+        if (!existingProduct) {
+            return res.status(404).json({ message: 'Güncellenecek ürün bulunamadı' });
+        }
         
         // Form verilerini işle
         const productData = {
@@ -168,9 +273,15 @@ router.put('/:id', authenticateToken, upload.array('images', 5), async (req, res
 
         // Özellikler
         if (req.body.features) {
-            const featuresText = req.body.features.trim();
-            if (featuresText) {
-                productData.features = featuresText.split('\n').filter(f => f.trim());
+            try {
+                productData.features = JSON.parse(req.body.features);
+            } catch (e) {
+                console.error('features parse hatası:', e);
+                // Metin olarak gelmiş olabilir, satırlara ayır
+                const featuresText = req.body.features.trim();
+                if (featuresText) {
+                    productData.features = featuresText.split('\n').filter(f => f.trim());
+                }
             }
         }
 
@@ -180,7 +291,6 @@ router.put('/:id', authenticateToken, upload.array('images', 5), async (req, res
             console.log('Yüklenen resimler:', productData.images);
         } else {
             // Eğer yeni resim yüklenmemişse, mevcut resimleri koru
-            const existingProduct = await Product.findById(req.params.id);
             if (existingProduct && existingProduct.images && existingProduct.images.length > 0) {
                 productData.images = existingProduct.images;
                 console.log('Mevcut resimler korunuyor:', productData.images);
@@ -190,6 +300,8 @@ router.put('/:id', authenticateToken, upload.array('images', 5), async (req, res
                 console.log('Varsayılan resim kullanılıyor');
             }
         }
+
+        console.log('Güncellenecek ürün verileri:', productData);
 
         const product = await Product.findByIdAndUpdate(
             req.params.id,

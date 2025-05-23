@@ -33,9 +33,12 @@ interface ApiService {
     suspend fun getProductById(@Path("id") id: String): Response<Product>
 
     @GET("api/products")
-    suspend fun getProductsByCategory(@Query("category") category: String): Response<List<Product>>
+    suspend fun getProductsByCategory(
+        @Query("category") category: String,
+        @Query("limit") limit: Int = 50
+    ): Response<List<Product>>
 
-    @GET("api/products")
+    @GET("api/products/search")
     suspend fun searchProducts(@Query("search") query: String): Response<List<Product>>
 
     // Kimlik Doğrulama Endpoint'leri
@@ -44,6 +47,18 @@ interface ApiService {
 
     @POST("api/auth/register")
     suspend fun register(@Body registerRequest: RegisterRequest): Response<AuthResponse>
+
+    // Kullanıcı Profili Endpoint'leri
+    @GET("api/auth/me")
+    suspend fun getUserProfile(): Response<User>
+    
+    // Kullanıcı profili ve adres bilgilerini getirme
+    @GET("api/users/profile")
+    suspend fun getUserProfileAndAddress(): Response<User>
+    
+    // Kullanıcı adres bilgilerini güncelleme
+    @PUT("api/users/profile")
+    suspend fun updateUserAddress(@Body user: UpdateAddressRequest): Response<User>
 
     // Sepet Endpoint'leri
     @GET("api/cart")
@@ -62,14 +77,14 @@ interface ApiService {
     suspend fun removeFromCart(@Path("productId") productId: String): Response<ApiResponse<Cart>>
 
     // Favori Ürünler Endpoint'leri
-    @GET("api/wishlist")
-    suspend fun getWishlist(): Response<ApiResponse<Wishlist>>
+    @GET("api/users/favorites")
+    suspend fun getFavorites(): Response<List<Product>>
 
-    @POST("api/wishlist")
-    suspend fun addToWishlist(@Body product: Map<String, String>): Response<ApiResponse<Wishlist>>
+    @POST("api/users/favorites/{productId}")
+    suspend fun addToFavorites(@Path("productId") productId: String): Response<FavoriteResponse>
 
-    @DELETE("api/wishlist/{productId}")
-    suspend fun removeFromWishlist(@Path("productId") productId: String): Response<ApiResponse<Wishlist>>
+    @DELETE("api/users/favorites/{productId}")
+    suspend fun removeFromFavorites(@Path("productId") productId: String): Response<FavoriteResponse>
 
     // Sipariş Endpoint'leri
     @GET("api/orders")
@@ -81,18 +96,23 @@ interface ApiService {
     @POST("api/orders")
     suspend fun createOrder(@Body order: Order): Response<ApiResponse<Order>>
 
-    // Kullanıcı Profili Endpoint'leri
-    @GET("api/profile")
-    suspend fun getUserProfile(): Response<ApiResponse<User>>
+    @GET("api/orders/myorders")
+    suspend fun getMyOrders(): Response<List<Order>>
 
-    @PUT("api/profile")
-    suspend fun updateUserProfile(@Body user: User): Response<ApiResponse<User>>
+    // Kullanıcı Profili Güncelleme
+    @PUT("api/auth/me")
+    suspend fun updateUserProfile(@Body user: User): Response<User>
 }
 
 data class ApiResponse<T>(
     val success: Boolean,
     val message: String?,
     val data: T?
+)
+
+// Adres güncelleme için istek sınıfı
+data class UpdateAddressRequest(
+    val address: Address
 )
 
 // DummyJSON için yanıt sınıfları

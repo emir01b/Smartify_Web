@@ -1,10 +1,10 @@
-const User = require('../models/userModel');
+const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
 // JWT token oluşturma
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE,
+  return jwt.sign({ userId: id }, process.env.JWT_SECRET || 'smartify-jwt-secret', {
+    expiresIn: process.env.JWT_EXPIRE || '30d',
   });
 };
 
@@ -16,7 +16,7 @@ const authUser = async (req, res) => {
 
   const user = await User.findOne({ email });
 
-  if (user && (await user.matchPassword(password))) {
+  if (user && (await user.comparePassword(password))) {
     res.json({
       _id: user._id,
       name: user.name,
@@ -149,6 +149,151 @@ const deleteUser = async (req, res) => {
   }
 };
 
+// @desc    Kullanıcının favori ürünlerini getir
+// @route   GET /api/users/favorites
+// @access  Private
+const getFavorites = async (req, res) => {
+  try {
+    console.log('getFavorites çağrıldı, user ID:', req.user._id);
+    
+    // Tüm alanları içeren populate işlemi
+    const user = await User.findById(req.user._id).populate({
+      path: 'favorites',
+      model: 'Product'
+    });
+    
+    if (!user) {
+      console.log('Kullanıcı bulunamadı');
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+    }
+    
+    console.log('Kullanıcı favorileri sayısı:', user.favorites ? user.favorites.length : 0);
+    console.log('Favorileri istenen kullanıcı:', user.name, user.email);
+    
+    // Hata ayıklama: Favoriler dizisini kontrol et
+    if (!user.favorites || user.favorites.length === 0) {
+      console.log('Kullanıcının favorileri yok');
+      return res.json([]);
+    }
+    
+    // Favoriler array içindeyse - çift gösterilme sorununu önlemek için
+    const uniqueFavorites = [];
+    const seenIds = new Set();
+    
+    // Çift kayıtları temizle
+    if (Array.isArray(user.favorites)) {
+      user.favorites.forEach(item => {
+        const id = item._id ? item._id.toString() : (typeof item === 'string' ? item : null);
+        if (id && !seenIds.has(id)) {
+          seenIds.add(id);
+          uniqueFavorites.push(item);
+        }
+      });
+      
+      console.log('Çift kayıtlar temizlendi. Benzersiz ürün sayısı:', uniqueFavorites.length);
+    }
+    
+    // Favorilerde sadece ID'ler varsa, manual olarak ürünleri getir
+    if (uniqueFavorites.length > 0 && typeof uniqueFavorites[0] === 'string') {
+      console.log('Favori ID\'leri tam objelerle populate edilmemiş, manuel olarak ürünleri getiriyoruz...');
+      
+      const Product = require('../models/Product');
+      const productIds = [...seenIds]; // Benzersiz ID'leri kullan
+      const products = await Product.find({ _id: { $in: productIds } });
+      
+      console.log('Bulunan ürün sayısı:', products.length);
+      return res.json(products);
+    }
+    
+    console.log('Populate başarılı, benzersiz favorileri gönderiyoruz');
+    res.json(uniqueFavorites);
+  } catch (error) {
+    console.error('Favorileri getirme hatası:', error);
+    res.status(500).json({ message: 'Favoriler getirilirken bir hata oluştu', error: error.message });
+  }
+};
+
+// @desc    Ürünü favorilere ekle
+// @route   POST /api/users/favorites/:productId
+// @access  Private
+const addToFavorites = async (req, res) => {
+  try {
+    const productId = req.params.productId;
+    const user = await User.findById(req.user._id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+    }
+    
+    // Favoriler array'i yoksa oluştur
+    if (!user.favorites) {
+      user.favorites = [];
+    }
+    
+    // Ürün zaten favorilerde mi kontrol et - string ve ObjectId durumunu kontrol eder
+    const isAlreadyFavorite = user.favorites.some(id => 
+      id.toString() === productId || id === productId
+    );
+    
+    if (isAlreadyFavorite) {
+      return res.status(400).json({ message: 'Ürün zaten favorilerde' });
+    }
+    
+    // Favorilere ekle
+    user.favorites.push(productId);
+    await user.save();
+    
+    console.log(`Ürün ID:${productId} kullanıcı ${user.name} favorilerine eklendi`);
+    
+    res.status(200).json({ message: 'Ürün favorilere eklendi', favorites: user.favorites });
+  } catch (error) {
+    console.error('Favorilere eklerken bir hata oluştu:', error);
+    res.status(500).json({ message: 'Favorilere eklerken bir hata oluştu', error: error.message });
+  }
+};
+
+// @desc    Ürünü favorilerden çıkar
+// @route   DELETE /api/users/favorites/:productId
+// @access  Private
+const removeFromFavorites = async (req, res) => {
+  try {
+    const productId = req.params.productId;
+    const user = await User.findById(req.user._id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+    }
+    
+    // Favoriler array'i yoksa hata döndür
+    if (!user.favorites || user.favorites.length === 0) {
+      return res.status(400).json({ message: 'Kullanıcının favorileri bulunmuyor' });
+    }
+    
+    // Ürün favorilerde mi kontrol et - string ve ObjectId durumunu kontrol eder
+    const isInFavorites = user.favorites.some(id => 
+      id.toString() === productId || id === productId
+    );
+    
+    if (!isInFavorites) {
+      return res.status(400).json({ message: 'Ürün favorilerde bulunamadı' });
+    }
+    
+    // Favorilerden çıkar - hem string hem de ObjectId durumlarını kontrol et
+    user.favorites = user.favorites.filter(id => 
+      id.toString() !== productId && id !== productId
+    );
+    
+    await user.save();
+    
+    console.log(`Ürün ID:${productId} kullanıcı ${user.name} favorilerinden çıkarıldı`);
+    
+    res.status(200).json({ message: 'Ürün favorilerden çıkarıldı', favorites: user.favorites });
+  } catch (error) {
+    console.error('Favorilerden çıkarırken bir hata oluştu:', error);
+    res.status(500).json({ message: 'Favorilerden çıkarırken bir hata oluştu', error: error.message });
+  }
+};
+
 module.exports = {
   authUser,
   registerUser,
@@ -156,4 +301,7 @@ module.exports = {
   updateUserProfile,
   getUsers,
   deleteUser,
+  getFavorites,
+  addToFavorites,
+  removeFromFavorites
 }; 

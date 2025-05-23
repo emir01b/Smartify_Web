@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/footer.css">
   <link rel="stylesheet" href="css/account.css">
   <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/chatbot.css">
   <script src="js/error-handler.js"></script>
 </head>
 <body>
@@ -233,6 +234,20 @@
   <div id="footer-container"></div>
 
   <script>
+    // Token kontrolü ve kimlik doğrulama
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user'));
+    
+    // API URL'i global olarak tanımla - tam URL'yi ver
+    window.API_URL = 'http://localhost:3000';
+    console.log('API URL tanımlandı:', window.API_URL);
+    
+    // Token veya kullanıcı yoksa login sayfasına yönlendir
+    if (!token || !user) {
+      console.log('Token veya kullanıcı bulunamadı, login sayfasına yönlendiriliyor');
+      window.location.href = 'login.html?redirect=account';
+    }
+
     fetch('components/navbar.html')
       .then(response => response.text())
       .then(data => {
@@ -249,9 +264,9 @@
             updateHeader();
           }
         };
-        document.body.appendChild(script);
+        document.head.appendChild(script);
       });
-      
+
     fetch('components/footer.html')
       .then(response => response.text())
       .then(data => {
@@ -259,5 +274,6 @@
       });
   </script>
   <script src="js/account.js"></script>
+  <script src="js/chatbot.js"></script>
 </body>
 </html> 

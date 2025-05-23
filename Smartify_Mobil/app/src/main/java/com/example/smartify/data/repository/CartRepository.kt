@@ -1,175 +1,146 @@
 package com.example.smartify.data.repository
 
-import com.example.smartify.api.ApiService
+import android.util.Log
 import com.example.smartify.api.models.Cart
 import com.example.smartify.api.models.CartItem
-import com.example.smartify.data.local.dao.CartDao
-import com.example.smartify.data.local.entities.toCart
-import com.example.smartify.data.local.entities.toCartEntity
-import com.example.smartify.data.local.entities.toCartItemEntity
+import com.example.smartify.api.models.Product
+import com.example.smartify.utils.CartManager
 import com.example.smartify.utils.NetworkResult
-import com.example.smartify.utils.SessionManager
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapNotNull
-import retrofit2.HttpException
-import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class CartRepository @Inject constructor(
-    private val apiService: ApiService,
-    private val cartDao: CartDao,
-    private val sessionManager: SessionManager
+    private val cartManager: CartManager
 ) {
-    // Uzak sunucudan sepeti getir
+    companion object {
+        private const val TAG = "CartRepository"
+    }
+    
+    // Sepeti getir
     suspend fun fetchCart(): NetworkResult<Cart> {
         return try {
-            val response = apiService.getCart()
-            
-            if (response.isSuccessful && response.body()?.success == true) {
-                val cart = response.body()?.data
-                
-                if (cart != null) {
-                    // Sepeti yerel veritabanına kaydet
-                    val cartEntity = cart.toCartEntity()
-                    cartDao.insertCart(cartEntity)
-                    
-                    // Sepet öğelerini temizle ve yenilerini kaydet
-                    cartDao.clearCartItems(cart.id)
-                    cartDao.insertCartItems(cart.items.map { it.toCartItemEntity(cart.id) })
-                    
-                    NetworkResult.Success(cart)
-                } else {
-                    NetworkResult.Error("Sepet bulunamadı")
-                }
-            } else {
-                NetworkResult.Error(response.body()?.message ?: "Sepet getirilirken bir hata oluştu")
-            }
-        } catch (e: IOException) {
-            NetworkResult.Error("İnternet bağlantınızı kontrol edin")
-        } catch (e: HttpException) {
-            NetworkResult.Error("Sunucu hatası: ${e.message}")
+            Log.d(TAG, "Sepet getiriliyor")
+            val cart = cartManager.getCart()
+            Log.d(TAG, "Sepet başarıyla alındı: ${cart.items.size} ürün")
+            NetworkResult.Success(cart)
         } catch (e: Exception) {
-            NetworkResult.Error("Bilinmeyen bir hata oluştu: ${e.message}")
+            Log.e(TAG, "Sepet getirilirken hata: ${e.message}", e)
+            NetworkResult.Error("Sepet getirilirken bir hata oluştu: ${e.message}")
         }
     }
     
     // Sepete ürün ekle
+    suspend fun addToCart(product: Product, quantity: Int = 1): NetworkResult<Cart> {
+        return try {
+            Log.d(TAG, "Ürün sepete ekleniyor: ${product.id}, miktar: $quantity")
+            val cart = cartManager.addToCart(product, quantity)
+            Log.d(TAG, "Ürün başarıyla sepete eklendi: Toplam ${cart.items.size} ürün")
+            NetworkResult.Success(cart)
+        } catch (e: Exception) {
+            Log.e(TAG, "Ürün sepete eklenirken hata: ${e.message}", e)
+            NetworkResult.Error("Ürün sepete eklenirken bir hata oluştu: ${e.message}")
+        }
+    }
+    
+    // Sepet öğesinden direkt ekleme (ürün detayları belli olduğunda)
     suspend fun addToCart(cartItem: CartItem): NetworkResult<Cart> {
         return try {
-            val response = apiService.addToCart(cartItem)
+            Log.d(TAG, "Ürün sepete ekleniyor: ${cartItem.productId}, miktar: ${cartItem.quantity}")
             
-            if (response.isSuccessful && response.body()?.success == true) {
-                val cart = response.body()?.data
-                
-                if (cart != null) {
-                    // Sepeti yerel veritabanına kaydet
-                    val cartEntity = cart.toCartEntity()
-                    cartDao.insertCart(cartEntity)
-                    
-                    // Sepet öğelerini temizle ve yenilerini kaydet
-                    cartDao.clearCartItems(cart.id)
-                    cartDao.insertCartItems(cart.items.map { it.toCartItemEntity(cart.id) })
-                    
-                    NetworkResult.Success(cart)
-                } else {
-                    NetworkResult.Error("Sepet güncellenemedi")
-                }
+            // Mevcut sepet öğelerini al
+            val currentItems = cartManager.getCart().items.toMutableList()
+            
+            // Ürün zaten sepette var mı kontrol et
+            val existingItemIndex = currentItems.indexOfFirst { it.productId == cartItem.productId }
+            
+            if (existingItemIndex != -1) {
+                // Varsa, miktarı güncelle
+                val existingItem = currentItems[existingItemIndex]
+                val updatedItem = existingItem.copy(quantity = existingItem.quantity + cartItem.quantity)
+                return updateCartItemQuantity(cartItem.productId, updatedItem.quantity)
             } else {
-                NetworkResult.Error(response.body()?.message ?: "Ürün sepete eklenirken bir hata oluştu")
+                // Yeni bir ürün oluştur ve mevcut listeye ekle
+                val product = Product(
+                    id = cartItem.productId,
+                    name = cartItem.name,
+                    images = listOf(cartItem.image),
+                    price = cartItem.price,
+                    oldPrice = null,
+                    categoryNames = emptyList(),
+                    category = "",
+                    mainCategory = "",
+                    isNew = false,
+                    isPopular = false,
+                    inStock = true,
+                    description = "",
+                    specifications = emptyMap(),
+                    createdAt = "",
+                    updatedAt = ""
+                )
+                
+                return addToCart(product, cartItem.quantity)
             }
-        } catch (e: IOException) {
-            NetworkResult.Error("İnternet bağlantınızı kontrol edin")
-        } catch (e: HttpException) {
-            NetworkResult.Error("Sunucu hatası: ${e.message}")
         } catch (e: Exception) {
-            NetworkResult.Error("Bilinmeyen bir hata oluştu: ${e.message}")
+            Log.e(TAG, "Ürün sepete eklenirken hata: ${e.message}", e)
+            NetworkResult.Error("Ürün sepete eklenirken bir hata oluştu: ${e.message}")
         }
     }
     
     // Sepetteki ürün miktarını güncelle
     suspend fun updateCartItemQuantity(productId: String, quantity: Int): NetworkResult<Cart> {
         return try {
-            val response = apiService.updateCartItem(productId, mapOf("quantity" to quantity))
-            
-            if (response.isSuccessful && response.body()?.success == true) {
-                val cart = response.body()?.data
-                
-                if (cart != null) {
-                    // Sepeti yerel veritabanına kaydet
-                    val cartEntity = cart.toCartEntity()
-                    cartDao.insertCart(cartEntity)
-                    
-                    // Sepet öğelerini temizle ve yenilerini kaydet
-                    cartDao.clearCartItems(cart.id)
-                    cartDao.insertCartItems(cart.items.map { it.toCartItemEntity(cart.id) })
-                    
-                    NetworkResult.Success(cart)
-                } else {
-                    NetworkResult.Error("Sepet güncellenemedi")
-                }
-            } else {
-                NetworkResult.Error(response.body()?.message ?: "Ürün miktarı güncellenirken bir hata oluştu")
-            }
-        } catch (e: IOException) {
-            NetworkResult.Error("İnternet bağlantınızı kontrol edin")
-        } catch (e: HttpException) {
-            NetworkResult.Error("Sunucu hatası: ${e.message}")
+            Log.d(TAG, "Ürün miktarı güncelleniyor: $productId, miktar: $quantity")
+            val cart = cartManager.updateCartItemQuantity(productId, quantity)
+            Log.d(TAG, "Ürün miktarı güncellendi, sepetteki toplam ürün: ${cart.items.size}")
+            NetworkResult.Success(cart)
         } catch (e: Exception) {
-            NetworkResult.Error("Bilinmeyen bir hata oluştu: ${e.message}")
+            Log.e(TAG, "Ürün miktarı güncellenirken hata: ${e.message}", e)
+            NetworkResult.Error("Ürün miktarı güncellenirken bir hata oluştu: ${e.message}")
         }
     }
     
     // Sepetten ürün çıkar
     suspend fun removeFromCart(productId: String): NetworkResult<Cart> {
         return try {
-            val response = apiService.removeFromCart(productId)
-            
-            if (response.isSuccessful && response.body()?.success == true) {
-                val cart = response.body()?.data
-                
-                if (cart != null) {
-                    // Sepeti yerel veritabanına kaydet
-                    val cartEntity = cart.toCartEntity()
-                    cartDao.insertCart(cartEntity)
-                    
-                    // Sepet öğelerini temizle ve yenilerini kaydet
-                    cartDao.clearCartItems(cart.id)
-                    cartDao.insertCartItems(cart.items.map { it.toCartItemEntity(cart.id) })
-                    
-                    NetworkResult.Success(cart)
-                } else {
-                    NetworkResult.Error("Sepet güncellenemedi")
-                }
-            } else {
-                NetworkResult.Error(response.body()?.message ?: "Ürün sepetten çıkarılırken bir hata oluştu")
-            }
-        } catch (e: IOException) {
-            NetworkResult.Error("İnternet bağlantınızı kontrol edin")
-        } catch (e: HttpException) {
-            NetworkResult.Error("Sunucu hatası: ${e.message}")
+            Log.d(TAG, "Ürün sepetten çıkarılıyor: $productId")
+            val cart = cartManager.removeFromCart(productId)
+            Log.d(TAG, "Ürün sepetten çıkarıldı: ${cart.items.size} ürün kaldı")
+            NetworkResult.Success(cart)
         } catch (e: Exception) {
-            NetworkResult.Error("Bilinmeyen bir hata oluştu: ${e.message}")
+            Log.e(TAG, "Ürün sepetten çıkarılırken hata: ${e.message}", e)
+            NetworkResult.Error("Ürün sepetten çıkarılırken bir hata oluştu: ${e.message}")
         }
     }
     
-    // Yerel veritabanından sepeti getir
-    @OptIn(ExperimentalCoroutinesApi::class)
-    fun getCart(): Flow<Cart?> {
-        return sessionManager.getUserId().flatMapLatest { userId ->
-            if (userId != null) {
-                cartDao.getCartWithItems(userId).map { cartWithItems ->
-                    cartWithItems?.let {
-                        it.cart.toCart(it.items)
-                    }
-                }
-            } else {
-                kotlinx.coroutines.flow.flowOf(null)
-            }
+    // Sepeti tamamen temizle
+    suspend fun clearCart(): NetworkResult<Cart> {
+        return try {
+            cartManager.clearCart()
+            Log.d(TAG, "Sepet tamamen temizlendi")
+            NetworkResult.Success(cartManager.getCart())
+        } catch (e: Exception) {
+            Log.e(TAG, "Sepet temizlenirken hata: ${e.message}", e)
+            NetworkResult.Error("Sepet temizlenirken bir hata oluştu: ${e.message}")
+        }
+    }
+    
+    // Sepet öğelerini Flow olarak al (gerçek zamanlı güncellemeler için)
+    fun getCartItemsFlow(): Flow<List<CartItem>> {
+        return cartManager.getCartItemsFlow()
+    }
+    
+    // Sepetteki toplam ürün sayısını Flow olarak al
+    fun getCartItemCountFlow(): Flow<Int> {
+        return cartManager.getCartItemsFlow().map { it.size }
+    }
+    
+    // Sepetteki toplam fiyatı Flow olarak al
+    fun getCartTotalFlow(): Flow<Double> {
+        return cartManager.getCartItemsFlow().map { items ->
+            items.sumOf { it.price * it.quantity }
         }
     }
 } 

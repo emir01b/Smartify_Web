@@ -1,5 +1,6 @@
 package com.example.smartify.ui.screens.cart
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +27,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,7 +35,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,57 +50,34 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.smartify.api.models.CartItem
+import com.example.smartify.api.toFullImageUrl
+import androidx.compose.foundation.clickable
 
-// Sepette gösterilecek örnek ürün modeli
-data class CartItem(
-    val id: String,
-    val name: String,
-    val price: Double,
-    val imageUrl: String,
-    val quantity: Int,
-    val isInStock: Boolean = true
-)
+private const val TAG = "CartScreen"
 
 @Composable
 fun CartScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToCheckout: () -> Unit
+    onNavigateToCheckout: () -> Unit,
+    viewModel: CartViewModel = hiltViewModel()
 ) {
-    // Örnek sepet verileri
-    val cartItems = remember {
-        listOf(
-            CartItem(
-                id = "1",
-                name = "Akıllı Ev Termostatı",
-                price = 599.99,
-                imageUrl = "https://example.com/thermostat.jpg",
-                quantity = 1
-            ),
-            CartItem(
-                id = "2",
-                name = "Akıllı Ampul - 3'lü Paket",
-                price = 199.99,
-                imageUrl = "https://example.com/bulbs.jpg",
-                quantity = 2
-            ),
-            CartItem(
-                id = "3",
-                name = "Kablosuz Güvenlik Kamerası",
-                price = 799.99,
-                imageUrl = "https://example.com/camera.jpg",
-                quantity = 1,
-                isInStock = false
-            ),
-        )
-    }
+    val state by viewModel.state.collectAsState()
+    val items = state.cartItems
     
-    var items by remember { mutableStateOf(cartItems) }
+    // Logging
+    DisposableEffect(key1 = true) {
+        Log.d(TAG, "CartScreen composed: isLoading=${state.isLoading}, error=${state.error}, items=${items.size}")
+        onDispose { }
+    }
     
     // Sepet özeti verileri
     val subtotal = items.sumOf { it.price * it.quantity }
@@ -131,14 +113,56 @@ fun CartScreen(
                 )
             }
             
-            if (items.isEmpty()) {
+            if (state.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (state.error != null) {
+                Log.e(TAG, "Hata durumu gösteriliyor: ${state.error}")
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = state.error ?: "Bilinmeyen hata",
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center
+                        )
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Button(
+                            onClick = { 
+                                Log.d(TAG, "Tekrar deneme butonuna tıklandı")
+                                viewModel.fetchCart() 
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Text("Tekrar Dene")
+                        }
+                    }
+                }
+            } else if (items.isEmpty()) {
+                Log.d(TAG, "Sepet boş durumu gösteriliyor")
                 // Sepet boşsa
                 EmptyCart(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)
+                        .weight(1f),
+                    onStartShopping = onNavigateBack
                 )
             } else {
+                Log.d(TAG, "Sepet içeriği gösteriliyor: ${items.size} ürün")
                 // Sepet içeriği
                 LazyColumn(
                     modifier = Modifier
@@ -150,8 +174,14 @@ fun CartScreen(
                     items(items) { item ->
                         CartItemCard(
                             cartItem = item,
-                            onQuantityChanged = { _, _ -> /* İşlev henüz yok */ },
-                            onRemoveItem = { _ -> /* İşlev henüz yok */ }
+                            onQuantityChanged = { id, quantity -> 
+                                Log.d(TAG, "Ürün miktarı değiştiriliyor: id=$id, miktar=$quantity")
+                                viewModel.updateCartItemQuantity(id, quantity)
+                            },
+                            onRemoveItem = { id -> 
+                                Log.d(TAG, "Ürün sepetten çıkarılıyor: id=$id")
+                                viewModel.removeFromCart(id)
+                            }
                         )
                     }
                     
@@ -162,15 +192,20 @@ fun CartScreen(
             }
             
             // Sepet özeti
-            CartSummary(
-                subtotal = subtotal,
-                shipping = shipping,
-                total = total,
-                onCheckout = onNavigateToCheckout,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            )
+            if (items.isNotEmpty()) {
+                CartSummary(
+                    subtotal = subtotal,
+                    shipping = shipping,
+                    total = total,
+                    onCheckout = {
+                        Log.d(TAG, "Ödemeye geç butonuna tıklandı")
+                        onNavigateToCheckout()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                )
+            }
         }
     }
 }
@@ -179,10 +214,13 @@ fun CartScreen(
 fun CartItemCard(
     cartItem: CartItem,
     onQuantityChanged: (String, Int) -> Unit,
-    onRemoveItem: (String) -> Unit
+    onRemoveItem: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
+    val isInStock = true // API'dan gelen CartItem'da isInStock yok, varsayılan olarak true kabul ediyoruz
+    
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -190,9 +228,9 @@ fun CartItemCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Ürün resmi için yer tutucu
+            // Ürün resmi
             Box(
                 modifier = Modifier
                     .size(80.dp)
@@ -202,7 +240,7 @@ fun CartItemCard(
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(cartItem.imageUrl)
+                        .data(cartItem.image.toFullImageUrl())
                         .crossfade(true)
                         .build(),
                     contentDescription = cartItem.name,
@@ -210,8 +248,6 @@ fun CartItemCard(
                     modifier = Modifier.fillMaxSize()
                 )
             }
-            
-            Spacer(modifier = Modifier.width(12.dp))
             
             Column(
                 modifier = Modifier.weight(1f)
@@ -237,7 +273,7 @@ fun CartItemCard(
                         fontWeight = FontWeight.Bold
                     )
                     
-                    if (!cartItem.isInStock) {
+                    if (!isInStock) {
                         Spacer(modifier = Modifier.width(8.dp))
                         
                         Text(
@@ -253,54 +289,67 @@ fun CartItemCard(
                 
                 // Adet ayarı
                 Row(
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    IconButton(
-                        onClick = { onQuantityChanged(cartItem.id, cartItem.quantity - 1) },
+                    // Azalt butonu - minimal bir görünüm için Box kullanıyoruz
+                    Box(
+                        contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(24.dp)
+                            .size(12.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = CircleShape
+                            )
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        enabled = cartItem.quantity > 1 && cartItem.isInStock
+                            .clickable(enabled = isInStock && cartItem.quantity > 1) {
+                                if (cartItem.quantity > 1) {
+                                    onQuantityChanged(cartItem.productId, cartItem.quantity - 1)
+                                }
+                            }
                     ) {
                         Icon(
                             imageVector = Icons.Default.Remove,
                             contentDescription = "Azalt",
-                            modifier = Modifier.size(16.dp),
-                            tint = if (cartItem.quantity > 1 && cartItem.isInStock) 
-                                MaterialTheme.colorScheme.onSurfaceVariant 
-                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            modifier = Modifier.size(6.dp),
+                            tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                     
+                    // Miktar
                     Text(
                         text = cartItem.quantity.toString(),
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        style = MaterialTheme.typography.bodyLarge
+                        modifier = Modifier.width(12.dp),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodySmall
                     )
                     
-                    IconButton(
-                        onClick = { onQuantityChanged(cartItem.id, cartItem.quantity + 1) },
+                    // Arttır butonu - minimal bir görünüm için Box kullanıyoruz
+                    Box(
+                        contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(24.dp)
+                            .size(12.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = CircleShape
+                            )
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary),
-                        enabled = cartItem.isInStock
+                            .clickable(enabled = isInStock) {
+                                onQuantityChanged(cartItem.productId, cartItem.quantity + 1)
+                            }
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Arttır",
-                            modifier = Modifier.size(16.dp),
-                            tint = if (cartItem.isInStock) 
-                                MaterialTheme.colorScheme.onPrimary 
-                                else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f)
+                            modifier = Modifier.size(6.dp),
+                            tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 }
             }
             
             IconButton(
-                onClick = { onRemoveItem(cartItem.id) }
+                onClick = { onRemoveItem(cartItem.productId) }
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
@@ -320,6 +369,8 @@ fun CartSummary(
     onCheckout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val viewModel = hiltViewModel<CartViewModel>()
+    
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
@@ -330,11 +381,36 @@ fun CartSummary(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Text(
-                text = "Sipariş Özeti",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Sipariş Özeti",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                // Sepeti temizle butonu
+                TextButton(
+                    onClick = { viewModel.clearCart() },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Sepeti Temizle",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Sepeti Temizle",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
             
             Spacer(modifier = Modifier.height(16.dp))
             
@@ -425,7 +501,8 @@ fun CartSummary(
 
 @Composable
 fun EmptyCart(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onStartShopping: () -> Unit = {}
 ) {
     Column(
         modifier = modifier,
@@ -469,7 +546,7 @@ fun EmptyCart(
         Spacer(modifier = Modifier.height(32.dp))
         
         OutlinedButton(
-            onClick = { /* İşlev henüz yok */ },
+            onClick = onStartShopping,
             modifier = Modifier.padding(horizontal = 32.dp),
             shape = RoundedCornerShape(12.dp)
         ) {

@@ -93,7 +93,6 @@ async function seedOrders() {
         
         // Örnek siparişler oluştur
         const orderCount = 15; // Oluşturulacak sipariş sayısı
-        const orders = [];
         
         for (let i = 0; i < orderCount; i++) {
             // Rastgele bir kullanıcı seç
@@ -107,7 +106,6 @@ async function seedOrders() {
             // Siparişe ürünler ekle
             const usedProductIndexes = new Set();
             for (let j = 0; j < orderItemsCount; j++) {
-                // Her üründen sadece bir kez ekleyelim
                 let productIndex;
                 do {
                     productIndex = randomInt(0, products.length - 1);
@@ -190,12 +188,18 @@ async function seedOrders() {
                 createdAt
             });
             
-            orders.push(order);
+            // Siparişi kaydet
+            const savedOrder = await order.save();
+            
+            // Kullanıcının orders dizisine siparişi ekle
+            user.orders = user.orders || [];
+            user.orders.push(savedOrder._id);
+            await user.save();
+            
+            console.log(`Sipariş #${i + 1} oluşturuldu ve kullanıcıya eklendi (Kullanıcı: ${user.email})`);
         }
         
-        // Siparişleri veritabanına kaydet
-        await Order.insertMany(orders);
-        console.log(`${orders.length} örnek sipariş başarıyla oluşturuldu`);
+        console.log(`${orderCount} örnek sipariş başarıyla oluşturuldu`);
         
         // Veritabanı bağlantısını kapat
         await mongoose.disconnect();

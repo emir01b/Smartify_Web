@@ -1,147 +1,143 @@
 package com.example.smartify.data.repository
 
+import android.util.Log
 import com.example.smartify.api.ApiService
-import com.example.smartify.api.models.Wishlist
-import com.example.smartify.data.local.dao.WishlistDao
-import com.example.smartify.data.local.entities.toWishlist
-import com.example.smartify.data.local.entities.toWishlistEntity
-import com.example.smartify.data.local.entities.toWishlistProductEntity
+import com.example.smartify.api.models.Product
 import com.example.smartify.utils.NetworkResult
 import com.example.smartify.utils.SessionManager
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flow
 import retrofit2.HttpException
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class WishlistRepository @Inject constructor(
+class FavoritesRepository @Inject constructor(
     private val apiService: ApiService,
-    private val wishlistDao: WishlistDao,
     private val sessionManager: SessionManager
 ) {
-    // Uzak sunucudan favori listesini getir
-    suspend fun fetchWishlist(): NetworkResult<Wishlist> {
-        return try {
-            val response = apiService.getWishlist()
+    companion object {
+        private const val TAG = "FavoritesRepository"
+    }
+    
+    // Kullanıcının favorilerini getir
+    suspend fun getFavorites(): Flow<NetworkResult<List<Product>>> = flow {
+        emit(NetworkResult.Loading)
+        
+        try {
+            Log.d(TAG, "Favoriler getiriliyor")
+            val response = apiService.getFavorites()
             
-            if (response.isSuccessful && response.body()?.success == true) {
-                val wishlist = response.body()?.data
-                
-                if (wishlist != null) {
-                    // Favori listesini yerel veritabanına kaydet
-                    val wishlistEntity = wishlist.toWishlistEntity()
-                    wishlistDao.insertWishlist(wishlistEntity)
-                    
-                    // Favori ürünleri temizle ve yenilerini kaydet
-                    wishlistDao.clearWishlistProducts(wishlist.id)
-                    wishlistDao.insertWishlistProducts(
-                        wishlist.products.map { it.toWishlistProductEntity(wishlist.id) }
-                    )
-                    
-                    NetworkResult.Success(wishlist)
+            if (response.isSuccessful) {
+                val favorites = response.body()
+                if (favorites != null) {
+                    Log.d(TAG, "Favoriler başarıyla alındı: ${favorites.size} ürün")
+                    emit(NetworkResult.Success(favorites))
                 } else {
-                    NetworkResult.Error("Favori listesi bulunamadı")
+                    Log.e(TAG, "Favoriler boş döndü")
+                    emit(NetworkResult.Error("Favoriler getirilirken bir hata oluştu: Boş yanıt"))
                 }
             } else {
-                NetworkResult.Error(response.body()?.message ?: "Favori listesi getirilirken bir hata oluştu")
+                val errorBody = response.errorBody()?.string()
+                Log.e(TAG, "Favoriler alınamadı. HTTP ${response.code()}: ${response.message()}, Error: $errorBody")
+                emit(NetworkResult.Error("Favoriler getirilirken bir hata oluştu: ${response.code()} ${response.message()}"))
             }
         } catch (e: IOException) {
+            Log.e(TAG, "İnternet bağlantı hatası: ${e.message}", e)
+            emit(NetworkResult.Error("İnternet bağlantınızı kontrol edin"))
+        } catch (e: HttpException) {
+            Log.e(TAG, "HTTP İstisna: ${e.code()} - ${e.message()}", e)
+            emit(NetworkResult.Error("Sunucu hatası: ${e.message}"))
+        } catch (e: Exception) {
+            Log.e(TAG, "Beklenmeyen hata: ${e.message}", e)
+            emit(NetworkResult.Error("Bilinmeyen bir hata oluştu: ${e.message}"))
+        }
+    }
+    
+    // Favorilere ürün ekle
+    suspend fun addToFavorites(productId: String): NetworkResult<String> {
+        return try {
+            Log.d(TAG, "Ürün favorilere ekleniyor: $productId")
+            val response = apiService.addToFavorites(productId)
+            
+            if (response.isSuccessful) {
+                val favoriteResponse = response.body()
+                if (favoriteResponse != null) {
+                    Log.d(TAG, "Ürün favorilere eklendi: ${favoriteResponse.message}")
+                    NetworkResult.Success("Ürün favorilere eklendi")
+                } else {
+                    Log.e(TAG, "Favorilere eklerken yanıt boş")
+                    NetworkResult.Error("Favorilere eklerken bir hata oluştu: Boş yanıt")
+                }
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Log.e(TAG, "Favorilere eklenemedi. HTTP ${response.code()}: ${response.message()}, Error: $errorBody")
+                NetworkResult.Error("Favorilere eklerken bir hata oluştu: ${response.code()} ${response.message()}")
+            }
+        } catch (e: IOException) {
+            Log.e(TAG, "İnternet bağlantı hatası: ${e.message}", e)
             NetworkResult.Error("İnternet bağlantınızı kontrol edin")
         } catch (e: HttpException) {
+            Log.e(TAG, "HTTP İstisna: ${e.code()} - ${e.message()}", e)
             NetworkResult.Error("Sunucu hatası: ${e.message}")
         } catch (e: Exception) {
+            Log.e(TAG, "Beklenmeyen hata: ${e.message}", e)
             NetworkResult.Error("Bilinmeyen bir hata oluştu: ${e.message}")
         }
     }
     
-    // Favori listesine ürün ekle
-    suspend fun addToWishlist(productId: String): NetworkResult<Wishlist> {
+    // Favorilerden ürün çıkar
+    suspend fun removeFromFavorites(productId: String): NetworkResult<String> {
         return try {
-            val response = apiService.addToWishlist(mapOf("productId" to productId))
+            Log.d(TAG, "Ürün favorilerden çıkarılıyor: $productId")
+            val response = apiService.removeFromFavorites(productId)
             
-            if (response.isSuccessful && response.body()?.success == true) {
-                val wishlist = response.body()?.data
-                
-                if (wishlist != null) {
-                    // Favori listesini yerel veritabanına kaydet
-                    val wishlistEntity = wishlist.toWishlistEntity()
-                    wishlistDao.insertWishlist(wishlistEntity)
-                    
-                    // Favori ürünleri temizle ve yenilerini kaydet
-                    wishlistDao.clearWishlistProducts(wishlist.id)
-                    wishlistDao.insertWishlistProducts(
-                        wishlist.products.map { it.toWishlistProductEntity(wishlist.id) }
-                    )
-                    
-                    NetworkResult.Success(wishlist)
+            if (response.isSuccessful) {
+                val favoriteResponse = response.body()
+                if (favoriteResponse != null) {
+                    Log.d(TAG, "Ürün favorilerden çıkarıldı: ${favoriteResponse.message}")
+                    NetworkResult.Success("Ürün favorilerden çıkarıldı")
                 } else {
-                    NetworkResult.Error("Favori listesi güncellenemedi")
+                    Log.e(TAG, "Favorilerden çıkarırken yanıt boş")
+                    NetworkResult.Error("Favorilerden çıkarırken bir hata oluştu: Boş yanıt")
                 }
             } else {
-                NetworkResult.Error(response.body()?.message ?: "Ürün favorilere eklenirken bir hata oluştu")
+                val errorBody = response.errorBody()?.string()
+                Log.e(TAG, "Favorilerden çıkarılamadı. HTTP ${response.code()}: ${response.message()}, Error: $errorBody")
+                NetworkResult.Error("Favorilerden çıkarırken bir hata oluştu: ${response.code()} ${response.message()}")
             }
         } catch (e: IOException) {
+            Log.e(TAG, "İnternet bağlantı hatası: ${e.message}", e)
             NetworkResult.Error("İnternet bağlantınızı kontrol edin")
         } catch (e: HttpException) {
+            Log.e(TAG, "HTTP İstisna: ${e.code()} - ${e.message()}", e)
             NetworkResult.Error("Sunucu hatası: ${e.message}")
         } catch (e: Exception) {
+            Log.e(TAG, "Beklenmeyen hata: ${e.message}", e)
             NetworkResult.Error("Bilinmeyen bir hata oluştu: ${e.message}")
         }
     }
     
-    // Favori listesinden ürün çıkar
-    suspend fun removeFromWishlist(productId: String): NetworkResult<Wishlist> {
-        return try {
-            val response = apiService.removeFromWishlist(productId)
+    // Ürünün favori olup olmadığını kontrol et
+    suspend fun isProductInFavorites(productId: String): Flow<Boolean> = flow {
+        try {
+            val response = apiService.getFavorites()
             
-            if (response.isSuccessful && response.body()?.success == true) {
-                val wishlist = response.body()?.data
-                
-                if (wishlist != null) {
-                    // Favori listesini yerel veritabanına kaydet
-                    val wishlistEntity = wishlist.toWishlistEntity()
-                    wishlistDao.insertWishlist(wishlistEntity)
-                    
-                    // Favori ürünleri temizle ve yenilerini kaydet
-                    wishlistDao.clearWishlistProducts(wishlist.id)
-                    wishlistDao.insertWishlistProducts(
-                        wishlist.products.map { it.toWishlistProductEntity(wishlist.id) }
-                    )
-                    
-                    NetworkResult.Success(wishlist)
+            if (response.isSuccessful) {
+                val favorites = response.body()
+                if (favorites != null) {
+                    val isFavorite = favorites.any { it.id == productId }
+                    emit(isFavorite)
                 } else {
-                    NetworkResult.Error("Favori listesi güncellenemedi")
+                    emit(false)
                 }
             } else {
-                NetworkResult.Error(response.body()?.message ?: "Ürün favorilerden çıkarılırken bir hata oluştu")
+                emit(false)
             }
-        } catch (e: IOException) {
-            NetworkResult.Error("İnternet bağlantınızı kontrol edin")
-        } catch (e: HttpException) {
-            NetworkResult.Error("Sunucu hatası: ${e.message}")
         } catch (e: Exception) {
-            NetworkResult.Error("Bilinmeyen bir hata oluştu: ${e.message}")
-        }
-    }
-    
-    // Yerel veritabanından favori listesini getir
-    @OptIn(ExperimentalCoroutinesApi::class)
-    fun getWishlist(): Flow<Wishlist?> {
-        return sessionManager.getUserId().flatMapLatest { userId ->
-            if (userId != null) {
-                wishlistDao.getWishlistWithProducts(userId).map { wishlistWithProducts ->
-                    wishlistWithProducts?.let {
-                        it.wishlist.toWishlist(it.products)
-                    }
-                }
-            } else {
-                flowOf(null)
-            }
+            Log.e(TAG, "Favorilerde olup olmadığı kontrol edilemedi: ${e.message}", e)
+            emit(false)
         }
     }
 } 

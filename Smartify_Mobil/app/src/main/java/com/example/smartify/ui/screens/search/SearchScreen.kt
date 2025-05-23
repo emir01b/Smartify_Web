@@ -55,6 +55,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.smartify.api.models.Product
+import com.example.smartify.api.toFullImageUrl
 
 @Composable
 fun SearchScreen(
@@ -388,7 +389,7 @@ fun ProductGridItem(
             // Ürün resmi
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(product.images.firstOrNull())
+                    .data(product.images.firstOrNull()?.toFullImageUrl())
                     .crossfade(true)
                     .build(),
                 contentDescription = product.name,

@@ -1,11 +1,13 @@
 package com.example.smartify.ui.screens.wishlist
 
+import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.smartify.api.models.WishlistProduct
-import com.example.smartify.data.repository.WishlistRepository
+import com.example.smartify.api.models.Product
+import com.example.smartify.api.toFullImageUrl
+import com.example.smartify.data.repository.FavoritesRepository
 import com.example.smartify.utils.NetworkResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.launchIn
@@ -15,18 +17,22 @@ import javax.inject.Inject
 
 @HiltViewModel
 class WishlistViewModel @Inject constructor(
-    private val wishlistRepository: WishlistRepository
+    private val favoritesRepository: FavoritesRepository
 ) : ViewModel() {
 
     private val _state = mutableStateOf(WishlistScreenState())
     val state: State<WishlistScreenState> = _state
+    
+    companion object {
+        private const val TAG = "WishlistViewModel"
+    }
 
     init {
-        getWishlist()
+        getFavorites()
     }
 
     // Favori listesini getir
-    fun getWishlist() {
+    fun getFavorites() {
         viewModelScope.launch {
             try {
                 _state.value = state.value.copy(
@@ -34,22 +40,34 @@ class WishlistViewModel @Inject constructor(
                     error = null
                 )
 
-                wishlistRepository.getWishlist().onEach { wishlist ->
-                    if (wishlist != null) {
-                        _state.value = state.value.copy(
-                            isLoading = false,
-                            error = null,
-                            wishlistItems = wishlist.products.map { it.toWishlistItem() }
-                        )
-                    } else {
-                        _state.value = state.value.copy(
-                            isLoading = false,
-                            error = null,
-                            wishlistItems = emptyList()
-                        )
+                favoritesRepository.getFavorites().onEach { result ->
+                    when (result) {
+                        is NetworkResult.Success -> {
+                            Log.d(TAG, "Favoriler başarıyla alındı: ${result.data.size} ürün")
+                            _state.value = state.value.copy(
+                                isLoading = false,
+                                error = null,
+                                wishlistItems = result.data.map { it.toWishlistItem() }
+                            )
+                        }
+                        is NetworkResult.Error -> {
+                            Log.e(TAG, "Favoriler alınırken hata: ${result.message}")
+                            _state.value = state.value.copy(
+                                isLoading = false,
+                                error = result.message,
+                                wishlistItems = emptyList()
+                            )
+                        }
+                        is NetworkResult.Loading -> {
+                            _state.value = state.value.copy(
+                                isLoading = true,
+                                error = null
+                            )
+                        }
                     }
                 }.launchIn(this)
             } catch (e: Exception) {
+                Log.e(TAG, "Favoriler yüklenirken genel hata: ${e.message}", e)
                 _state.value = state.value.copy(
                     isLoading = false,
                     error = "Favoriler yüklenirken bir hata oluştu: ${e.message}"
@@ -62,15 +80,17 @@ class WishlistViewModel @Inject constructor(
     fun removeFromWishlist(productId: String) {
         viewModelScope.launch {
             try {
-                val result = wishlistRepository.removeFromWishlist(productId)
+                val result = favoritesRepository.removeFromFavorites(productId)
                 
                 when (result) {
                     is NetworkResult.Success -> {
+                        Log.d(TAG, "Ürün favorilerden çıkarıldı: $productId")
                         _state.value = state.value.copy(
                             wishlistItems = state.value.wishlistItems.filter { it.id != productId }
                         )
                     }
                     is NetworkResult.Error -> {
+                        Log.e(TAG, "Ürün favorilerden çıkarılırken hata: ${result.message}")
                         _state.value = state.value.copy(
                             error = result.message
                         )
@@ -78,6 +98,7 @@ class WishlistViewModel @Inject constructor(
                     else -> {}
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "Ürün favorilerden çıkarılırken beklenmeyen hata: ${e.message}", e)
                 _state.value = state.value.copy(
                     error = "Ürün favorilerden çıkarılırken bir hata oluştu: ${e.message}"
                 )
@@ -91,13 +112,13 @@ class WishlistViewModel @Inject constructor(
     }
 }
 
-// WishlistProduct'ı UI modelimiz olan WishlistItem'a dönüştüren extension fonksiyon
-private fun WishlistProduct.toWishlistItem() = WishlistItem(
-    id = productId,
+// Product'ı WishlistItem'a dönüştüren extension fonksiyon
+private fun Product.toWishlistItem() = WishlistItem(
+    id = id,
     name = name,
     price = price,
-    imageUrl = image,
-    isInStock = true // API'den bu bilgiyi alamadığımız için varsayılan olarak true kullanıyoruz
+    imageUrl = images.firstOrNull()?.toFullImageUrl() ?: "",
+    isInStock = stock?.let { it > 0 } ?: inStock
 )
 
 // Ekran durumu

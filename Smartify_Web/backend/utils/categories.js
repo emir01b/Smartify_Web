@@ -21,7 +21,7 @@ const categories = {
     HomeAutomation: {
         name: "Ev Otomasyonu",
         subcategories: {
-            SmartHome: "Akıllı Ev Sistemleri",
+            SmartHomeSystem: "Akıllı Ev Sistemleri",
             Climate: "İklimlendirme",
             Entertainment: "Eğlence Sistemleri",
             Energy: "Enerji Yönetimi"
@@ -42,10 +42,12 @@ const initCategories = async (db) => {
             await categoriesCollection.insertOne(categories);
             console.log('Kategoriler başarıyla eklendi');
         } else {
-            console.log('Kategoriler zaten mevcut');
+            // Güncelleme yaparak tutarlılığı sağla
+            await categoriesCollection.updateOne({}, { $set: categories });
+            console.log('Kategoriler güncellendi');
         }
     } catch (error) {
-        console.error('Kategori ekleme hatası:', error);
+        console.error('Kategori ekleme/güncelleme hatası:', error);
     }
 };
 

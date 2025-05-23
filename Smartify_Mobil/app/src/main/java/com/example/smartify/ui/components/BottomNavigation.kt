@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.smartify.ui.navigation.BottomNavigationItem
+import com.example.smartify.utils.Constants
 
 @Composable
 fun BottomNavigationBar(
@@ -50,7 +51,17 @@ fun BottomNavigationBar(
                 },
                 selected = selected,
                 alwaysShowLabel = true,
-                onClick = { onItemClick(item.route) },
+                onClick = { 
+                    if (item.route == Constants.Routes.PROFILE) {
+                        navController.navigate(item.route) {
+                            popUpTo(Constants.Routes.PROFILE) { inclusive = true }
+                            launchSingleTop = false
+                            restoreState = false
+                        }
+                    } else {
+                        onItemClick(item.route)
+                    }
+                },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.primary,
                     selectedTextColor = MaterialTheme.colorScheme.primary,

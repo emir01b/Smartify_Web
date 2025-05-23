@@ -12,14 +12,15 @@ data class User(
     val email: String,
     val phone: String? = null,
     val address: Address? = null,
-    val createdAt: String
+    val isAdmin: Boolean = false,
+    val createdAt: String,
+    val updatedAt: String? = null
 ) : Parcelable
 
 @Parcelize
 data class Address(
-    val street: String,
-    val city: String,
-    val state: String,
-    val zipCode: String,
-    val country: String
+    val street: String = "",
+    val city: String = "",
+    val postalCode: String = "",
+    val country: String = ""
 ) : Parcelable 

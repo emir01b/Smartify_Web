@@ -1,12 +1,15 @@
 // API URL kontrolü - window'dan veya doğrudan tanımlama
-let AUTH_API_URL;
+let BASE_URL;
 
 // window.API_URL varsa onu kullan, yoksa varsayılan değeri kullan
 if (typeof window.API_URL !== 'undefined') {
-  AUTH_API_URL = window.API_URL;
+  // window.API_URL'i kullan
+  BASE_URL = window.API_URL.replace('/api', ''); // "/api" son ekini kaldır
+  console.log('Base URL ayarlandı:', BASE_URL);
 } else {
-  AUTH_API_URL = 'http://localhost:3000/api';
-  console.warn('window.API_URL bulunamadı, varsayılan değer kullanılıyor');
+  // Varsayılan Base URL
+  BASE_URL = 'http://localhost:3000';
+  console.warn('window.API_URL bulunamadı, varsayılan değer kullanılıyor:', BASE_URL);
 }
 
 // Token ve kullanıcı saklama işlemleri - window nesnesi üzerinden çalıştırma
@@ -226,7 +229,7 @@ const initModalVerificationForm = () => {
 // E-posta ve doğrulama kodu almak için ön kayıt
 const preRegister = async (name, email, password) => {
   try {
-    const response = await fetch(`${AUTH_API_URL}/auth/pre-register`, {
+    const response = await fetch(`${BASE_URL}/api/auth/pre-register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -234,7 +237,20 @@ const preRegister = async (name, email, password) => {
       body: JSON.stringify({ name, email, password })
     });
     
-    const data = await response.json();
+    // Yanıt boş mu kontrol et
+    const text = await response.text();
+    if (!text) {
+      throw new Error('Sunucudan boş yanıt alındı');
+    }
+    
+    let data;
+    try {
+      // Yanıt JSON formatında mı kontrol et
+      data = JSON.parse(text);
+    } catch (parseError) {
+      console.error('JSON parse hatası:', parseError, 'Yanıt:', text);
+      throw new Error('Sunucudan geçersiz yanıt alındı. Lütfen daha sonra tekrar deneyin.');
+    }
     
     if (!response.ok) {
       throw new Error(data.message || 'Ön kayıt işlemi başarısız oldu');
@@ -245,6 +261,7 @@ const preRegister = async (name, email, password) => {
     
     showToast('Yeni doğrulama kodu e-posta adresinize gönderildi');
   } catch (error) {
+    console.error('Ön kayıt hatası:', error);
     showToast(error.message || 'İşlem sırasında bir hata oluştu', 'error');
   }
 };
@@ -253,19 +270,43 @@ const preRegister = async (name, email, password) => {
 const login = async (email, password) => {
   try {
     console.log('Giriş denemesi:', email);
-    console.log('API URL:', `${AUTH_API_URL}/auth/login`);
     
-    const response = await fetch(`${AUTH_API_URL}/auth/login`, {
+    // Doğru API URL'yi oluştur
+    const loginUrl = `${BASE_URL}/api/auth/login`;
+    console.log('API URL:', loginUrl);
+    
+    const response = await fetch(loginUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ email, password })
+    })
+    .catch(fetchError => {
+      console.error('Fetch hatası (ağ hatası):', fetchError);
+      throw new Error('Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin.');
     });
     
     console.log('Login yanıtı:', response.status);
     
-    const data = await response.json();
+    // Yanıt boş mu kontrol et
+    const text = await response.text();
+    console.log('Yanıt boyutu:', text.length, 'karakter');
+    
+    if (!text || text.trim() === '') {
+      console.error('Boş yanıt alındı, status:', response.status);
+      throw new Error('Sunucudan boş yanıt alındı. Lütfen daha sonra tekrar deneyin.');
+    }
+    
+    let data;
+    try {
+      // Yanıt JSON formatında mı kontrol et
+      data = JSON.parse(text);
+    } catch (parseError) {
+      console.error('JSON parse hatası:', parseError, 'Yanıt:', text.substring(0, 100) + '...');
+      throw new Error('Sunucudan geçersiz yanıt alındı. Lütfen daha sonra tekrar deneyin.');
+    }
+    
     console.log('Login veri:', data);
     
     if (!response.ok) {
@@ -303,8 +344,24 @@ const login = async (email, password) => {
     }
     
     showToast('Başarıyla giriş yapıldı');
+    
+    // URL'den yönlendirme parametresini kontrol et
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectParam = urlParams.get('redirect');
+    
     setTimeout(() => {
-      window.location.href = 'index.html';
+      if (redirectParam) {
+        // Eğer bir yönlendirme parametresi varsa, belirtilen sayfaya git
+        if (redirectParam === 'account') {
+          const hash = urlParams.get('hash') || '';
+          window.location.href = `account.html${hash ? '#' + hash : ''}`;
+        } else {
+          window.location.href = redirectParam + '.html';
+        }
+      } else {
+        // Yoksa ana sayfaya git
+        window.location.href = 'index.html';
+      }
     }, 1000);
   } catch (error) {
     console.error('Login hatası:', error);
@@ -329,7 +386,7 @@ const register = async (name, email, password, verificationCode = null) => {
     }
     
     // Önce kullanıcıyı tam kaydettir
-    const responseRegister = await fetch(`${AUTH_API_URL}/auth/complete-register`, {
+    const responseRegister = await fetch(`${BASE_URL}/api/auth/complete-register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -343,7 +400,20 @@ const register = async (name, email, password, verificationCode = null) => {
       })
     });
     
-    const dataRegister = await responseRegister.json();
+    // Yanıt boş mu kontrol et
+    const text = await responseRegister.text();
+    if (!text) {
+      throw new Error('Sunucudan boş yanıt alındı');
+    }
+    
+    let dataRegister;
+    try {
+      // Yanıt JSON formatında mı kontrol et
+      dataRegister = JSON.parse(text);
+    } catch (parseError) {
+      console.error('JSON parse hatası:', parseError, 'Yanıt:', text);
+      throw new Error('Sunucudan geçersiz yanıt alındı. Lütfen daha sonra tekrar deneyin.');
+    }
     
     if (!responseRegister.ok) {
       throw new Error(dataRegister.message || 'Kayıt işlemi başarısız oldu');
@@ -367,6 +437,7 @@ const register = async (name, email, password, verificationCode = null) => {
       window.location.href = 'index.html';
     }, 1000);
   } catch (error) {
+    console.error('Kayıt hatası:', error);
     showToast(error.message || 'Kayıt olurken bir hata oluştu', 'error');
   }
 };
@@ -374,7 +445,7 @@ const register = async (name, email, password, verificationCode = null) => {
 // E-posta doğrulama
 const verifyEmail = async (userId, verificationCode) => {
   try {
-    const response = await fetch(`${AUTH_API_URL}/auth/verify`, {
+    const response = await fetch(`${BASE_URL}/api/auth/verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -382,7 +453,20 @@ const verifyEmail = async (userId, verificationCode) => {
       body: JSON.stringify({ userId, verificationCode })
     });
     
-    const data = await response.json();
+    // Yanıt boş mu kontrol et
+    const text = await response.text();
+    if (!text) {
+      throw new Error('Sunucudan boş yanıt alındı');
+    }
+    
+    let data;
+    try {
+      // Yanıt JSON formatında mı kontrol et
+      data = JSON.parse(text);
+    } catch (parseError) {
+      console.error('JSON parse hatası:', parseError, 'Yanıt:', text);
+      throw new Error('Sunucudan geçersiz yanıt alındı. Lütfen daha sonra tekrar deneyin.');
+    }
     
     if (!response.ok) {
       throw new Error(data.message || 'Doğrulama işlemi başarısız');
@@ -406,6 +490,7 @@ const verifyEmail = async (userId, verificationCode) => {
       window.location.href = 'index.html';
     }, 1000);
   } catch (error) {
+    console.error('Doğrulama hatası:', error);
     showToast(error.message || 'Doğrulama kodunu kontrol edin', 'error');
   }
 };
@@ -413,7 +498,7 @@ const verifyEmail = async (userId, verificationCode) => {
 // Doğrulama kodunu tekrar gönder
 const resendVerificationCode = async (userId) => {
   try {
-    const response = await fetch(`${AUTH_API_URL}/auth/resend-verification`, {
+    const response = await fetch(`${BASE_URL}/api/auth/resend-verification`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -421,7 +506,20 @@ const resendVerificationCode = async (userId) => {
       body: JSON.stringify({ userId })
     });
     
-    const data = await response.json();
+    // Yanıt boş mu kontrol et
+    const text = await response.text();
+    if (!text) {
+      throw new Error('Sunucudan boş yanıt alındı');
+    }
+    
+    let data;
+    try {
+      // Yanıt JSON formatında mı kontrol et
+      data = JSON.parse(text);
+    } catch (parseError) {
+      console.error('JSON parse hatası:', parseError, 'Yanıt:', text);
+      throw new Error('Sunucudan geçersiz yanıt alındı. Lütfen daha sonra tekrar deneyin.');
+    }
     
     if (!response.ok) {
       throw new Error(data.message || 'Kod gönderilirken bir hata oluştu');
@@ -429,6 +527,7 @@ const resendVerificationCode = async (userId) => {
     
     showToast('Yeni doğrulama kodu e-posta adresinize gönderildi');
   } catch (error) {
+    console.error('Kod gönderme hatası:', error);
     showToast(error.message || 'Kod gönderilirken bir hata oluştu', 'error');
   }
 };
@@ -523,8 +622,8 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // API_URL'i kontrol et
   if (typeof window.API_URL !== 'undefined') {
-    AUTH_API_URL = window.API_URL;
-    console.log('API_URL window nesnesinden alındı:', AUTH_API_URL);
+    BASE_URL = window.API_URL.replace('/api', '');
+    console.log('API_URL window nesnesinden alındı, BASE_URL ayarlandı:', BASE_URL);
   }
   
   initAuthTabs();

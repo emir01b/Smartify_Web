@@ -1,5 +1,6 @@
 package com.example.smartify.ui.screens.profile
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -29,14 +30,24 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,137 +59,285 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.smartify.R
+import com.example.smartify.api.models.User
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     onNavigateToOrders: () -> Unit,
     onNavigateToWishlist: () -> Unit,
     onNavigateToAddresses: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Column(
+    val profileState by viewModel.profileState.collectAsState()
+    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+    
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    
+    // Profil sayfası her açıldığında oturum durumunu kontrol et
+    LaunchedEffect(Unit) {
+        Log.d("ProfileScreen", "Profil sayfası açıldı, oturum durumu kontrol ediliyor")
+        // Önce kısa bir bekleme süresinden sonra kontrol et 
+        // (navigasyon ve token kaydetme sürecinin tamamlanması için)
+        delay(100)
+        viewModel.checkLoginStatus()
+    }
+    
+    LaunchedEffect(key1 = isLoggedIn) {
+        Log.d("ProfileScreen", "Oturum durumu değişti: $isLoggedIn")
+        if (!isLoggedIn) {
+            Log.d("ProfileScreen", "Oturum açık değil, giriş ekranına yönlendiriliyor")
+            onNavigateToLogin()
+        }
+    }
+    
+    LaunchedEffect(key1 = profileState) {
+        if (profileState is ProfileState.Error) {
+            scope.launch {
+                snackbarHostState.showSnackbar((profileState as ProfileState.Error).message)
+            }
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
+        Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+                .padding(padding),
+            color = MaterialTheme.colorScheme.background
         ) {
-            // Profil Başlığı
-            Text(
-                text = "Hesabım",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 24.dp)
+            when (profileState) {
+                is ProfileState.Loading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+                is ProfileState.Success -> {
+                    val user = (profileState as ProfileState.Success).user
+                    ProfileContent(
+                        user = user,
+                        onNavigateToOrders = onNavigateToOrders,
+                        onNavigateToWishlist = onNavigateToWishlist,
+                        onNavigateToAddresses = onNavigateToAddresses,
+                        onNavigateToSettings = onNavigateToSettings,
+                        onLogout = {
+                            viewModel.logout()
+                            onNavigateToLogin()
+                        }
+                    )
+                }
+                is ProfileState.Error -> {
+                    // Hata durumunda giriş yapılmamış varsayılan ekranı göster
+                    DefaultProfileContent(
+                        onNavigateToOrders = onNavigateToOrders,
+                        onNavigateToWishlist = onNavigateToWishlist,
+                        onNavigateToAddresses = onNavigateToAddresses,
+                        onNavigateToSettings = onNavigateToSettings,
+                        onNavigateToLogin = onNavigateToLogin
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfileContent(
+    user: User,
+    onNavigateToOrders: () -> Unit,
+    onNavigateToWishlist: () -> Unit,
+    onNavigateToAddresses: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onLogout: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+    ) {
+        // Profil Başlığı
+        Text(
+            text = "Hesabım",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+        
+        // Profil Kartı
+        ProfileCard(
+            name = user.name,
+            email = user.email,
+            onEditProfile = {}
+        )
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // İşlem Menüsü
+        Text(
+            text = "İşlemler",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        
+        // Siparişlerim
+        ProfileMenuItem(
+            icon = Icons.Default.ShoppingCart,
+            title = "Siparişlerim",
+            subtitle = "Siparişlerinizi görüntüleyin ve takip edin",
+            onClick = onNavigateToOrders
+        )
+        
+        // Favorilerim
+        ProfileMenuItem(
+            icon = Icons.Default.FavoriteBorder,
+            title = "Favorilerim",
+            subtitle = "Favori ürünlerinizi görüntüleyin",
+            onClick = onNavigateToWishlist
+        )
+        
+        // Adreslerim
+        ProfileMenuItem(
+            icon = Icons.Default.LocationOn,
+            title = "Adreslerim",
+            subtitle = "Kayıtlı adreslerinizi yönetin",
+            onClick = onNavigateToAddresses
+        )
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Ayarlar Menüsü
+        Text(
+            text = "Ayarlar",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        
+        // Ayarlar
+        ProfileMenuItem(
+            icon = Icons.Default.Settings,
+            title = "Uygulama Ayarları",
+            subtitle = "Tema ve bildirim ayarlarını yönetin",
+            onClick = onNavigateToSettings
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        // Çıkış Yap
+        OutlinedCard(
+            modifier = Modifier.fillMaxWidth(),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
+            colors = CardDefaults.outlinedCardColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)
             )
-            
-            // Profil Kartı
-            ProfileCard(
-                name = "Kullanıcı Adı",
-                email = "kullanici@example.com",
-                onEditProfile = {}
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // İşlem Menüsü
-            Text(
-                text = "İşlemler",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-            
-            // Siparişlerim
-            ProfileMenuItem(
-                icon = Icons.Default.ShoppingCart,
-                title = "Siparişlerim",
-                subtitle = "Siparişlerinizi görüntüleyin ve takip edin",
-                onClick = onNavigateToOrders
-            )
-            
-            // Favorilerim
-            ProfileMenuItem(
-                icon = Icons.Default.FavoriteBorder,
-                title = "Favorilerim",
-                subtitle = "Favori ürünlerinizi görüntüleyin",
-                onClick = onNavigateToWishlist
-            )
-            
-            // Adreslerim
-            ProfileMenuItem(
-                icon = Icons.Default.LocationOn,
-                title = "Adreslerim",
-                subtitle = "Kayıtlı adreslerinizi yönetin",
-                onClick = onNavigateToAddresses
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // Ayarlar Menüsü
-            Text(
-                text = "Ayarlar",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-            
-            // Ayarlar
-            ProfileMenuItem(
-                icon = Icons.Default.Settings,
-                title = "Uygulama Ayarları",
-                subtitle = "Bildirim ve gizlilik ayarlarını yönetin",
-                onClick = onNavigateToSettings
-            )
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            // Çıkış Yap
-            OutlinedCard(
-                modifier = Modifier.fillMaxWidth(),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
-                colors = CardDefaults.outlinedCardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)
-                )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Icon(
+                    imageVector = Icons.Default.ExitToApp,
+                    contentDescription = "Çıkış Yap",
+                    tint = MaterialTheme.colorScheme.error
+                )
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                Text(
+                    text = "Çıkış Yap",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+                
+                Spacer(modifier = Modifier.weight(1f))
+                
+                IconButton(onClick = onLogout) {
                     Icon(
-                        imageVector = Icons.Default.ExitToApp,
+                        imageVector = Icons.Default.ArrowForward,
                         contentDescription = "Çıkış Yap",
                         tint = MaterialTheme.colorScheme.error
                     )
-                    
-                    Spacer(modifier = Modifier.width(16.dp))
-                    
-                    Text(
-                        text = "Çıkış Yap",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                    
-                    Spacer(modifier = Modifier.weight(1f))
-                    
-                    IconButton(onClick = onNavigateToLogin) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowForward,
-                            contentDescription = "Çıkış Yap",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
                 }
             }
-            
-            Spacer(modifier = Modifier.height(24.dp))
         }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+fun DefaultProfileContent(
+    onNavigateToOrders: () -> Unit,
+    onNavigateToWishlist: () -> Unit,
+    onNavigateToAddresses: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToLogin: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Profil Başlığı
+        Text(
+            text = "Hesabım",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = "Hesap bilgilerinizi görmek için lütfen giriş yapın",
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 24.dp)
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            onClick = onNavigateToLogin,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(
+                text = "Giriş Yap",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -208,7 +367,7 @@ fun ProfileCard(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = name.first().toString(),
+                    text = name.firstOrNull()?.toString() ?: "?",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     textAlign = TextAlign.Center
@@ -248,6 +407,7 @@ fun ProfileCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileMenuItem(
     icon: ImageVector,

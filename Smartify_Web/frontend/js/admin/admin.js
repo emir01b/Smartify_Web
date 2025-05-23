@@ -1,11 +1,19 @@
 // API İşlemleri
 async function fetchAPI(endpoint, options = {}) {
     const baseURL = 'http://localhost:3000/api';
+    const token = localStorage.getItem('adminToken');
+    
+    // Token yoksa admin paneline erişim yok, login sayfasına yönlendir
+    if (!token) {
+        console.error('Token bulunamadı, login sayfasına yönlendiriliyor');
+        window.location.href = '/admin/login.html?expired=true';
+        throw new Error('Oturum bilgisi bulunamadı');
+    }
+    
     const defaultOptions = {
         headers: {
             'Content-Type': 'application/json',
-            // Token'ı localStorage'dan al
-            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+            'Authorization': `Bearer ${token}`
         }
     };
 
@@ -15,6 +23,8 @@ async function fetchAPI(endpoint, options = {}) {
     }
 
     try {
+        console.log(`API isteği: ${endpoint}`);
+        
         const response = await fetch(`${baseURL}${endpoint}`, {
             ...defaultOptions,
             ...options,
@@ -26,14 +36,30 @@ async function fetchAPI(endpoint, options = {}) {
 
         // Token geçersizse login sayfasına yönlendir
         if (response.status === 401) {
+            console.error('Yetkisiz erişim (401), token geçersiz');
             localStorage.removeItem('adminToken');
-            window.location.href = '/admin/login.html';
-            return;
+            localStorage.removeItem('lastAuthCheck');
+            window.location.href = '/admin/login.html?expired=true';
+            throw new Error('Oturum süreniz doldu');
+        }
+        
+        // Sunucu hatası
+        if (response.status >= 500) {
+            console.error(`Sunucu hatası (${response.status})`);
+            throw new Error('Sunucu hatası, lütfen daha sonra tekrar deneyin');
         }
 
-        const data = await response.json();
+        // JSON yanıtını parse et
+        let data;
+        try {
+            data = await response.json();
+        } catch (e) {
+            console.error('JSON parse hatası:', e);
+            throw new Error('Sunucu yanıtı işlenemedi');
+        }
         
         if (!response.ok) {
+            console.error(`API hatası: ${response.status}`, data);
             throw new Error(data.message || 'Bir hata oluştu');
         }
 
@@ -253,82 +279,64 @@ async function checkAdminAuth() {
     const token = localStorage.getItem('adminToken');
     
     if (!token) {
-        window.location.href = '/admin/login.html';
+        console.error('Token bulunamadı');
+        window.location.href = '/admin/login.html?expired=true';
         return;
     }
     
+    // Son kontrol zamanını kontrol et
+    const lastCheck = localStorage.getItem('lastAuthCheck');
+    const now = Date.now();
+    
+    // Eğer son 30 dakika içinde kontrol edildiyse tekrar kontrol etme
+    if (lastCheck && (now - parseInt(lastCheck)) < 30 * 60 * 1000) {
+        console.log('Son token kontrolü 30 dakikadan yeni, tekrar kontrol edilmiyor.');
+        return;
+    }
+    
+    console.log('Token kontrolü yapılıyor...');
+    
     // Token'ın geçerliliğini kontrol et
     try {
-        const response = await fetch('/api/auth/me', {
+        const response = await fetch('http://localhost:3000/api/auth/me', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
         
         if (!response.ok) {
-            // Token geçersiz veya süresi dolmuş, kullanıcıyı login sayfasına yönlendir
+            console.error(`Token kontrol hatası: ${response.status}`);
             localStorage.removeItem('adminToken');
+            localStorage.removeItem('lastAuthCheck');
             window.location.href = '/admin/login.html?expired=true';
             return;
         }
         
-        // Token geçerli, kullanıcı bilgilerini al
         const userData = await response.json();
-        if (!userData.isAdmin) {
+        
+        if (!userData || !userData.isAdmin) {
             // Kullanıcı admin değil
+            console.error('Kullanıcı admin değil veya geçersiz token');
             localStorage.removeItem('adminToken');
+            localStorage.removeItem('lastAuthCheck');
             window.location.href = '/admin/login.html?unauthorized=true';
             return;
         }
+        
+        console.log('Token doğrulandı, kullanıcı:', userData.name);
+        
+        // Son kontrol zamanını kaydet
+        localStorage.setItem('lastAuthCheck', now.toString());
     } catch (error) {
         console.error('Token doğrulama hatası:', error);
-        window.location.href = '/admin/login.html?error=true';
+        // Token doğrulama hatası, kullanıcıyı yönlendir
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('lastAuthCheck');
+        window.location.href = '/admin/login.html?expired=true';
     }
 }
 
-// API isteği gönder
-async function fetchAPI(url, method = 'GET', body = null) {
-    const token = localStorage.getItem('adminToken');
-    
-    if (!token) {
-        window.location.href = '/admin/login.html';
-        return null;
-    }
-    
-    try {
-        const options = {
-            method,
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        };
-        
-        if (body) {
-            options.body = JSON.stringify(body);
-        }
-        
-        const response = await fetch(url, options);
-        
-        if (response.status === 401) {
-            // Token geçersiz veya süresi dolmuş
-            localStorage.removeItem('adminToken');
-            window.location.href = '/admin/login.html?expired=true';
-            return null;
-        }
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'API isteği başarısız');
-        }
-        
-        return await response.json();
-    } catch (error) {
-        console.error('API hatası:', error);
-        showNotification(error.message, 'error');
-        return null;
-    }
-}
+// API isteği gönder - Not: Dosyanın başında zaten bir fetchAPI fonksiyonu tanımlanmış
 
 // Bildirim göster
 function showNotification(message, type = 'info') {

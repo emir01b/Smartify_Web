@@ -8,23 +8,38 @@ import kotlinx.parcelize.Parcelize
 data class Order(
     @SerializedName("_id")
     val id: String,
-    val userId: String,
+    val user: String,
+    @SerializedName("orderItems")
     val items: List<OrderItem>,
-    val totalPrice: Double,
-    val shippingAddress: Address,
+    val shippingAddress: ShippingAddress,
     val paymentMethod: String,
-    val paymentStatus: String,
-    val orderStatus: String,
-    val trackingNumber: String? = null,
+    val totalPrice: Double,
+    val shippingPrice: Double,
+    val taxPrice: Double,
+    val isPaid: Boolean,
+    val paidAt: String? = null,
+    val isDelivered: Boolean,
+    val status: String,
     val createdAt: String,
     val updatedAt: String
 ) : Parcelable
 
 @Parcelize
 data class OrderItem(
-    val productId: String,
+    val product: String,
     val name: String,
-    val image: String,
     val price: Double,
-    val quantity: Int
+    val quantity: Int,
+    val image: String
+) : Parcelable
+
+@Parcelize
+data class ShippingAddress(
+    val firstName: String,
+    val lastName: String,
+    val address: String,
+    val city: String,
+    val postalCode: String,
+    val phone: String,
+    val email: String
 ) : Parcelable 

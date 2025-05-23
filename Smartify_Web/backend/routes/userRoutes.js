@@ -7,6 +7,9 @@ const {
   updateUserProfile,
   getUsers,
   deleteUser,
+  getFavorites,
+  addToFavorites,
+  removeFromFavorites
 } = require('../controllers/userController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -17,5 +20,9 @@ router
   .get(protect, getUserProfile)
   .put(protect, updateUserProfile);
 router.route('/:id').delete(protect, admin, deleteUser);
+
+// Favoriler için yeni rotalar
+router.route('/favorites').get(protect, getFavorites);
+router.route('/favorites/:productId').post(protect, addToFavorites).delete(protect, removeFromFavorites);
 
 module.exports = router; 

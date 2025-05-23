@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/footer.css">
   <link rel="stylesheet" href="css/auth.css">
   <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/chatbot.css">
   <script src="js/error-handler.js"></script>
 </head>
 <body>
@@ -172,6 +173,10 @@
     document.addEventListener('DOMContentLoaded', function() {
       console.log('Login sayfası DOMContentLoaded çalıştı');
       
+      // API URL'i global olarak tanımla - tam URL'yi ver
+      window.API_URL = 'http://localhost:3000';
+      console.log('API URL tanımlandı:', window.API_URL);
+      
       // Önce navbar ve footer bileşenlerini yükle
       Promise.all([
         fetch('components/navbar.html').then(response => response.text()),
@@ -200,5 +205,6 @@
   <!-- JavaScript dosyalarını yükle (önce main.js, sonra auth.js) -->
   <script src="js/main.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/chatbot.js"></script>
 </body>
 </html> 

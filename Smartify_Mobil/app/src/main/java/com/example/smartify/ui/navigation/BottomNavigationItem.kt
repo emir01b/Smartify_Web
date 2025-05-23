@@ -46,7 +46,7 @@ sealed class BottomNavigationItem(
     
     companion object {
         val items = listOf(
-            Home, Search, Cart, Wishlist, Profile
+            Home, Search, Cart, Profile
         )
     }
 } 

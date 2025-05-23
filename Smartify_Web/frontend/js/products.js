@@ -1,6 +1,17 @@
+// API URL'i tanımla - main.js'den gelen API_URL'i kullan veya varsayılan olarak localhost'u kullan
+const PRODUCTS_API_URL = window.API_URL || 'http://localhost:3000';
+
 // Ürünleri görüntüle
 async function displayProducts() {
     const productsContainer = document.getElementById('productsContainer');
+    
+    // Yükleme animasyonunu göster
+    productsContainer.innerHTML = `
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>Ürünler yükleniyor...</p>
+        </div>
+    `;
     
     try {
         // URL'den parametreleri al
@@ -26,17 +37,33 @@ async function displayProducts() {
         // Aktif filtreleri göster
         displayActiveFilters();
 
+        console.log('Ürünler yükleniyor URL:', PRODUCTS_API_URL + endpoint);
+
         // Ürünleri getir
-        const response = await fetch(endpoint, {
+        const response = await fetch(PRODUCTS_API_URL + endpoint, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
-            }
+            },
+            // 10 saniye timeout ekle
+            signal: AbortSignal.timeout(10000)
         });
-        if (!response.ok) throw new Error('Ürünler yüklenemedi');
+        
+        // Response HTML dönüyorsa muhtemelen API yanıt vermiyor
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error('API JSON yerine HTML döndürdü veya beklenmeyen bir içerik tipi döndü:', contentType);
+            throw new Error('API sunucusuna bağlanılamadı veya sunucu JSON yanıtı vermedi.');
+        }
+        
+        if (!response.ok) {
+            console.error('API Yanıt Durumu:', response.status, response.statusText);
+            throw new Error(`Ürünler yüklenemedi (HTTP ${response.status})`);
+        }
         
         const products = await response.json();
+        console.log('Yüklenen ürünler:', products.length);
         
         // Ürün yoksa mesaj göster
         if (!products || products.length === 0) {
@@ -105,7 +132,10 @@ async function displayProducts() {
         productsContainer.innerHTML = `
             <div class="error-message">
                 <i class="fas fa-exclamation-circle"></i>
-                <p>Ürünler yüklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.</p>
+                <p>Ürünler yüklenirken bir hata oluştu: ${error.message || 'Bilinmeyen bir hata'}</p>
+                <button onclick="location.reload()" class="retry-btn">
+                    <i class="fas fa-sync-alt"></i> Tekrar Dene
+                </button>
             </div>
         `;
     }
@@ -154,22 +184,39 @@ function setupFilters() {
             pill.classList.remove('active');
         }
 
-        pill.addEventListener('click', () => {
-            // Diğer balonlardan active sınıfını kaldır
-            document.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
-            // Tıklanan balona active sınıfını ekle
-            pill.classList.add('active');
-
-            const category = pill.dataset.category;
-            if (category === 'all') {
-                const urlParams = new URLSearchParams(window.location.search);
-                urlParams.delete('mainCategory');
-                window.location.href = `products.html?${urlParams.toString()}`;
-            } else {
-                updateFilters('mainCategory', category);
-            }
-        });
+        // Önce eski event listener'ları kaldır - çift tıklamayı önlemek için
+        pill.removeEventListener('click', handleCategoryPillClick);
+        
+        // Yeni event listener ekle
+        pill.addEventListener('click', handleCategoryPillClick);
     });
+}
+
+// Kategori pillerine tıklama işleyicisi
+function handleCategoryPillClick(e) {
+    // Diğer balonlardan active sınıfını kaldır
+    document.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
+    
+    // Tıklanan balona active sınıfını ekle
+    e.currentTarget.classList.add('active');
+
+    const category = e.currentTarget.dataset.category;
+    console.log('Kategori butonuna tıklandı:', category);
+    
+    if (category === 'all') {
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.delete('mainCategory');
+        
+        // Diğer parametreleri koru
+        const paramsString = urlParams.toString();
+        const newUrl = `products.html${paramsString ? `?${paramsString}` : ''}`;
+        
+        console.log('Yönlendirilecek URL:', newUrl);
+        window.location.href = newUrl;
+    } else {
+        // Kategori değiştiğinde diğer filtreler korunurken sadece mainCategory değişsin
+        updateFilters('mainCategory', category);
+    }
 }
 
 // Aktif filtreleri göster
@@ -234,6 +281,7 @@ function removeFilter(type) {
 
 // Filtreleri güncelle
 function updateFilters(key, value) {
+    console.log(`Filtre güncelleniyor: ${key} = ${value}`);
     const urlParams = new URLSearchParams(window.location.search);
     
     if (value === null) {
@@ -242,7 +290,18 @@ function updateFilters(key, value) {
         urlParams.set(key, value);
     }
     
-    window.location.href = `products.html?${urlParams.toString()}`;
+    // Alt kategori ve ana kategori uyumsuzluğunu önle
+    if (key === 'mainCategory') {
+        // Ana kategori değiştiğinde alt kategoriyi temizle
+        urlParams.delete('category');
+    } else if (key === 'category') {
+        // Alt kategori eklendiğinde önceki ana kategori filtresini korumayabilir
+        // Bu davranışı değiştirmek istiyorsanız burada ana kategoriyi de silme işlemi yapılabilir
+    }
+    
+    const newUrl = `products.html?${urlParams.toString()}`;
+    console.log('Yeni URL:', newUrl);
+    window.location.href = newUrl;
 }
 
 // Ürün butonlarına event listener ekle
@@ -268,10 +327,11 @@ function setupProductButtons() {
 function addToCart(productId) {
     console.log(`Ürün ID: ${productId} sepete ekleniyor...`);
     
-    // Ürün bilgilerini al
-    fetch(`http://localhost:3000/api/products/${productId}`)
+    // Önce ürün bilgilerini al
+    fetch(`${PRODUCTS_API_URL}/api/products/${productId}`)
         .then(response => {
             if (!response.ok) {
+                console.error('Ürün bilgileri API yanıt durumu:', response.status);
                 throw new Error('Ürün bilgileri alınamadı');
             }
             return response.json();
@@ -316,17 +376,66 @@ function addToCart(productId) {
 }
 
 // Favorilere ekle/çıkar
-function toggleWishlist(productId, button) {
-    const isInWishlist = button.classList.contains('active');
+async function toggleWishlist(productId, button) {
+    const token = localStorage.getItem('token');
     
-    if (isInWishlist) {
-        button.classList.remove('active');
-        button.querySelector('i').className = 'far fa-heart';
-        window.showToast('Ürün favorilerden çıkarıldı', 'info');
-    } else {
-        button.classList.add('active');
-        button.querySelector('i').className = 'fas fa-heart';
-        window.showToast('Ürün favorilere eklendi', 'success');
+    if (!token) {
+        showNotification('Favorilere eklemek için giriş yapmalısınız.', 'warning');
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 1500);
+        return;
+    }
+    
+    try {
+        const isInWishlist = button.querySelector('i').classList.contains('fas');
+        let response;
+        
+        if (isInWishlist) {
+            // Favorilerden çıkar
+            const url = `${PRODUCTS_API_URL}/api/users/favorites/${productId}`;
+            console.log('Favorilerden çıkarma URL:', url);
+            
+            response = await fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                button.classList.remove('active');
+                button.querySelector('i').className = 'far fa-heart';
+                showNotification('Ürün favorilerden çıkarıldı', 'info');
+            }
+        } else {
+            // Favorilere ekle
+            const url = `${PRODUCTS_API_URL}/api/users/favorites/${productId}`;
+            console.log('Favorilere ekleme URL:', url);
+            
+            response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                button.classList.add('active');
+                button.querySelector('i').className = 'fas fa-heart';
+                showNotification('Ürün favorilere eklendi', 'success');
+            }
+        }
+        
+        if (!response.ok) {
+            console.error('Favori işlemi API yanıt durumu:', response.status, response.statusText);
+            throw new Error('İşlem başarısız oldu');
+        }
+    } catch (error) {
+        console.error('Favori işlemi hatası:', error);
+        showNotification('Bir hata oluştu. Lütfen tekrar deneyin.', 'error');
     }
 }
 
@@ -356,10 +465,52 @@ function showNotification(message, type = 'info') {
 }
 
 // Sayfa yüklendiğinde
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Ürünleri yükle
-    displayProducts();
+    await displayProducts();
     
     // Filtre ayarlarını kur
     setupFilters();
+    
+    // Favorileri kontrol et ve butonları güncelle
+    checkFavoriteProducts();
 });
+
+// Favorilere eklenmiş ürünleri kontrol et ve ilgili butonları aktif hale getir
+async function checkFavoriteProducts() {
+    const token = localStorage.getItem('token');
+    if (!token) return; // Kullanıcı giriş yapmadıysa kontrol etme
+    
+    try {
+        const url = `${PRODUCTS_API_URL}/api/users/favorites`;
+        console.log('Favorileri kontrol etme URL:', url);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            return;
+        }
+        
+        const favorites = await response.json();
+        console.log('Kullanıcı favorileri:', favorites);
+        
+        // Her bir favori ürün için ürün kartındaki favorilere ekle butonunu bul ve aktif hale getir
+        favorites.forEach(product => {
+            if (product && product._id) {
+                const wishlistBtn = document.querySelector(`.wishlist-btn[data-id="${product._id}"]`);
+                if (wishlistBtn) {
+                    wishlistBtn.classList.add('active');
+                    wishlistBtn.querySelector('i').className = 'fas fa-heart';
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Favorileri kontrol ederken hata:', error);
+    }
+}

@@ -5,8 +5,8 @@ const { generateVerificationCode, generateExpiryTime } = require('../utils/verif
 
 // JWT token oluşturma
 const generateToken = (user) => {
-    // Admin kullanıcılar için daha uzun süreli token (7 gün), normal kullanıcılar için 24 saat
-    const expiresIn = user.isAdmin ? '7d' : '24h';
+    // Admin kullanıcılar için daha uzun süreli token (30 gün), normal kullanıcılar için 7 gün
+    const expiresIn = user.isAdmin ? '30d' : '7d';
     
     return jwt.sign(
         { userId: user._id, isAdmin: user.isAdmin, isVerified: user.isVerified },
@@ -344,46 +344,35 @@ const resendVerificationCode = async (req, res, next) => {
  * Kullanıcı girişi
  * @route POST /api/auth/login
  */
-const login = async (req, res, next) => {
+const loginWithMiddleware = async (req, res, next) => {
     try {
         const { email, password } = req.body;
-
+        
+        console.log('Giriş denemesi (middleware):', email);
+        
         // Kullanıcıyı bul
         const user = await User.findOne({ email });
         if (!user) {
+            console.log('Kullanıcı bulunamadı:', email);
             return res.status(401).json({ message: 'Geçersiz e-posta veya şifre' });
         }
-
+        
+        console.log('Kullanıcı bulundu:', user.name, 'ID:', user._id);
+        
         // Şifreyi kontrol et
         const isPasswordValid = await user.comparePassword(password);
         if (!isPasswordValid) {
+            console.log('Şifre eşleşmedi:', user.email);
             return res.status(401).json({ message: 'Geçersiz e-posta veya şifre' });
         }
-
-        // Kullanıcı doğrulanmış mı kontrol et
-        if (!user.isVerified) {
-            // Yeni doğrulama kodu oluştur
-            const verificationCode = generateVerificationCode();
-            const verificationCodeExpires = generateExpiryTime(15);
-
-            // Kullanıcıyı güncelle
-            user.verificationCode = verificationCode;
-            user.verificationCodeExpires = verificationCodeExpires;
-            await user.save();
-
-            // Doğrulama e-postası gönder
-            await sendVerificationEmail(user.email, verificationCode, user.name);
-
-            return res.status(401).json({
-                message: 'Hesabınız henüz doğrulanmamış. Yeni bir doğrulama kodu e-posta adresinize gönderildi.',
-                needVerification: true,
-                userId: user._id
-            });
-        }
-
+        
+        console.log('Şifre doğrulandı, token oluşturuluyor');
+        
         // Token oluştur
         const token = generateToken(user);
-
+        
+        console.log('Giriş başarılı, kullanıcı bilgileri gönderiliyor');
+        
         // Kullanıcı bilgilerini gönder
         res.json({
             token,
@@ -396,6 +385,7 @@ const login = async (req, res, next) => {
             }
         });
     } catch (error) {
+        // Hatayı middleware'e aktar
         next(error);
     }
 };
@@ -423,12 +413,142 @@ const getProfile = async (req, res, next) => {
     }
 };
 
+// Basit registerUser fonksiyonu 
+const registerUser = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    
+    // E-posta kontrolü
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Bu e-posta adresi zaten kullanımda' });
+    }
+    
+    // Yeni kullanıcı oluştur
+    const user = new User({
+      name,
+      email,
+      password,
+      isVerified: true
+    });
+    
+    await user.save();
+    
+    // Token oluştur
+    const token = generateToken(user);
+    
+    res.status(201).json({
+      message: 'Kayıt başarılı!',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        isVerified: user.isVerified
+      }
+    });
+  } catch (error) {
+    console.error('Kayıt hatası:', error);
+    res.status(500).json({ message: 'Sunucu hatası, lütfen daha sonra tekrar deneyin' });
+  }
+};
+
+// Basit loginUser fonksiyonu
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    console.log('Giriş denemesi:', email);
+    
+    // Kullanıcıyı bul
+    const user = await User.findOne({ email });
+    if (!user) {
+      console.log('Kullanıcı bulunamadı:', email);
+      return res.status(401).json({ message: 'Geçersiz e-posta veya şifre' });
+    }
+    
+    console.log('Kullanıcı bulundu:', user.name, 'ID:', user._id);
+    
+    // Şifreyi kontrol et - User modelindeki comparePassword metodu kullanılıyor
+    try {
+      const isMatch = await user.comparePassword(password);
+      if (!isMatch) {
+        console.log('Şifre eşleşmedi:', user.email);
+        return res.status(401).json({ message: 'Geçersiz e-posta veya şifre' });
+      }
+    } catch (passwordError) {
+      console.error('Şifre doğrulama hatası:', passwordError);
+      return res.status(500).json({ message: 'Giriş sırasında bir hata oluştu' });
+    }
+    
+    console.log('Şifre doğrulandı, token oluşturuluyor');
+    
+    // Token oluştur
+    const token = generateToken(user);
+    
+    console.log('Giriş başarılı, kullanıcı bilgileri gönderiliyor');
+    
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        isVerified: user.isVerified
+      }
+    });
+  } catch (error) {
+    console.error('Giriş hatası (İşlenmemiş):', error);
+    res.status(500).json({ message: 'Sunucu hatası, lütfen daha sonra tekrar deneyin' });
+  }
+};
+
+// Basit verifyUser fonksiyonu
+const verifyUser = async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    console.log('Token doğrulama denemesi:', token.substring(0, 10) + '...');
+    
+    // Token doğrula ve kullanıcıyı bul
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'smartify-jwt-secret');
+    console.log('Token doğrulandı, kullanıcı ID:', decoded.userId);
+    
+    const user = await User.findById(decoded.userId);
+    
+    if (!user) {
+      console.log('Kullanıcı bulunamadı, ID:', decoded.userId);
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+    }
+    
+    console.log('Kullanıcı bulundu:', user.name, 'Email:', user.email);
+    
+    // Kullanıcıyı doğrulanmış olarak işaretle
+    user.isVerified = true;
+    user.verificationCode = null;
+    user.verificationCodeExpires = null;
+    await user.save();
+    
+    console.log('Kullanıcı doğrulandı:', user.name);
+    
+    res.json({ message: 'E-posta adresi başarıyla doğrulandı! Şimdi giriş yapabilirsiniz.' });
+  } catch (error) {
+    console.error('Doğrulama hatası (İşlenmemiş):', error);
+    res.status(400).json({ message: 'Geçersiz veya süresi dolmuş doğrulama bağlantısı' });
+  }
+};
+
 module.exports = {
     preRegister,
     completeRegister,
     register,
     verifyEmail,
     resendVerificationCode,
-    login,
-    getProfile
+    login: loginWithMiddleware,
+    getProfile,
+    registerUser,
+    loginUser,
+    verifyUser
 }; 

@@ -29,10 +29,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,7 +50,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,155 +77,186 @@ import com.example.smartify.api.models.Product
 import com.example.smartify.api.toFullImageUrl
 import kotlinx.coroutines.delay
 
+// HomeViewModel'e erişim için CompositionLocal
+val LocalHomeViewModel = compositionLocalOf<HomeViewModel> { error("HomeViewModel has not been provided") }
+
 @Composable
 fun HomeScreen(
     onNavigateToProductDetail: (String) -> Unit,
-    onNavigateToCart: () -> Unit,
-    onNavigateToWishlist: () -> Unit,
-    onNavigateToProfile: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state = viewModel.state.value
     var searchQuery by remember { mutableStateOf("") }
     
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+    // HomeViewModel'i compose ağacına sağla
+    CompositionLocalProvider(LocalHomeViewModel provides viewModel) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
         ) {
-            // Başlık ve Arama
-            Text(
-                text = "Smartify",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                textAlign = TextAlign.Center
-            )
-            
-            // Arama alanı
-            TextField(
-                value = searchQuery,
-                onValueChange = {
-                    searchQuery = it
-                    viewModel.searchProducts(it)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Ürün ara...") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Ara"
-                    )
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(24.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                )
-            )
-            
-            // Yükleniyor durumu
-            if (state.isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-            
-            // Hata durumu
-            state.error?.let { error ->
-                Box(
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                // Başlık ve Arama
+                Text(
+                    text = "Smartify",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = error,
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-            
-            // Öne Çıkan Ürünler
-            if (state.featuredProducts.isNotEmpty()) {
-                Text(
-                    text = "Öne Çıkan Ürünler",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(16.dp, 8.dp)
+                    textAlign = TextAlign.Center
                 )
                 
-                FeaturedProductsRow(
-                    products = state.featuredProducts,
-                    onProductClick = onNavigateToProductDetail
-                )
-            }
-            
-            // Tüm Ürünler
-            if (state.products.isNotEmpty()) {
-                Text(
-                    text = "Tüm Ürünler",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(16.dp, 8.dp)
-                )
-                
-                ProductGrid(
-                    products = state.products,
-                    onProductClick = onNavigateToProductDetail
-                )
-            } else if (!state.isLoading && state.error == null) {
-                // Ürün yoksa
-                Box(
+                // Arama alanı
+                TextField(
+                    value = searchQuery,
+                    onValueChange = {
+                        searchQuery = it
+                        viewModel.searchProducts(it)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    placeholder = { Text("Ürün ara...") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Ara"
+                        )
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(24.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    )
+                )
+                
+                // Yükleniyor durumu
+                if (state.isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+                
+                // Hata durumu
+                state.error?.let { error ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = "Hata",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            Text(
+                                text = error,
+                                color = MaterialTheme.colorScheme.error,
+                                textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            
+                            Spacer(modifier = Modifier.height(24.dp))
+                            
+                            Button(
+                                onClick = { viewModel.getProducts() },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.padding(horizontal = 32.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "Tekrar Dene",
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = "Tekrar Dene",
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Öne Çıkan Ürünler
+                if (state.featuredProducts.isNotEmpty()) {
                     Text(
-                        text = "Ürün bulunamadı",
-                        textAlign = TextAlign.Center
+                        text = "Öne Çıkan Ürünler",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(16.dp, 8.dp)
+                    )
+                    
+                    FeaturedProductsRow(
+                        products = state.featuredProducts,
+                        onProductClick = onNavigateToProductDetail
                     )
                 }
-            }
-            
-            Spacer(modifier = Modifier.height(80.dp)) // FAB için yer bırak
-        }
-        
-        // Sepet butonu
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.BottomEnd
-        ) {
-            FloatingActionButton(
-                onClick = onNavigateToCart,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier
-                    .padding(16.dp)
-                    .size(56.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ShoppingCart,
-                    contentDescription = "Sepete Git"
-                )
+                
+                // Tüm Ürünler
+                if (state.products.isNotEmpty()) {
+                    Text(
+                        text = "Tüm Ürünler",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(16.dp, 8.dp)
+                    )
+                    
+                    ProductGrid(
+                        products = state.products,
+                        onProductClick = onNavigateToProductDetail,
+                        onFavoriteClick = { productId -> viewModel.toggleFavorite(productId) },
+                        favoriteProductIds = viewModel.favoriteProductIds.value
+                    )
+                } else if (!state.isLoading && state.error == null) {
+                    // Ürün yoksa
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Ürün bulunamadı",
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+                
+                // Spacer çok büyük, FAB kaldırıldığı için boyutunu küçültelim
+                Spacer(modifier = Modifier.height(20.dp))
             }
         }
     }
@@ -359,7 +397,9 @@ fun FeaturedProductsRow(
 @Composable
 fun ProductGrid(
     products: List<Product>,
-    onProductClick: (String) -> Unit
+    onProductClick: (String) -> Unit,
+    onFavoriteClick: (String) -> Unit = {},
+    favoriteProductIds: Set<String> = emptySet()
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -369,13 +409,23 @@ fun ProductGrid(
         modifier = Modifier.height(900.dp) // Sabit yükseklik vermek zorunda kaldım çünkü LazyVerticalGrid ve verticalScroll birlikte kullanımında çatışma oluyor
     ) {
         items(products) { product ->
-            ProductCard(product = product, onClick = { onProductClick(product.id) })
+            ProductCard(
+                product = product, 
+                onClick = { onProductClick(product.id) },
+                onFavoriteClick = onFavoriteClick,
+                isFavorite = favoriteProductIds.contains(product.id)
+            )
         }
     }
 }
 
 @Composable
-fun ProductCard(product: Product, onClick: () -> Unit) {
+fun ProductCard(
+    product: Product, 
+    onClick: () -> Unit,
+    onFavoriteClick: (String) -> Unit = {},
+    isFavorite: Boolean = false
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -384,19 +434,40 @@ fun ProductCard(product: Product, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            val imageUrl = product.images.firstOrNull()?.toFullImageUrl()
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(imageUrl)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = product.name,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
-                contentScale = ContentScale.Crop,
-                error = painterResource(id = R.drawable.ic_logo)
-            )
+            // Ürün resmi ve favoriler butonu
+            Box {
+                val imageUrl = product.images.firstOrNull()?.toFullImageUrl()
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(imageUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = product.name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(id = R.drawable.ic_logo)
+                )
+                
+                // Favorilere ekle/çıkar butonu
+                IconButton(
+                    onClick = { onFavoriteClick(product.id) },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(4.dp)
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (isFavorite) "Favorilerden Çıkar" else "Favorilere Ekle",
+                        tint = if (isFavorite) Color(0xFFE91E63) else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
             
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
@@ -438,8 +509,9 @@ fun ProductCard(product: Product, onClick: () -> Unit) {
                         )
                     }
                     
+                    val viewModel = LocalHomeViewModel.current
                     IconButton(
-                        onClick = { /* Sepete ekle */ },
+                        onClick = { viewModel.addToCart(product) },
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(

@@ -8,9 +8,16 @@ object Constants {
     const val PREFS_NAME = "smartify_prefs"
     const val KEY_TOKEN = "user_token"
     const val KEY_USER_ID = "user_id"
+    const val KEY_USER_NAME = "user_name"
+    const val KEY_USER_EMAIL = "user_email"
+    const val KEY_USER_JSON = "user_json"
     
     // DataStore
     const val DATASTORE_NAME = "smartify_datastore"
+    
+    // Cart DataStore Keys
+    const val KEY_CART_ITEMS = "cart_items"
+    const val KEY_CART_ID = "cart_id"
     
     // Navigation Routes
     object Routes {
@@ -26,6 +33,8 @@ object Constants {
         const val ORDERS = "orders"
         const val ORDER_DETAIL = "order_detail/{orderId}"
         const val CHECKOUT = "checkout"
+        const val SETTINGS = "settings"
+        const val ADDRESSES = "addresses"
     }
     
     // UI Constants

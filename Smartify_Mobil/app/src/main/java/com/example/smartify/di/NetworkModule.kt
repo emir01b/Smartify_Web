@@ -2,7 +2,9 @@ package com.example.smartify.di
 
 import com.example.smartify.BuildConfig
 import com.example.smartify.api.ApiService
-import com.example.smartify.utils.Constants
+import com.example.smartify.api.ChatApiService
+import com.example.smartify.api.repository.AuthRepository
+import com.example.smartify.utils.SessionManager
 import com.example.smartify.utils.TokenInterceptor
 import dagger.Module
 import dagger.Provides
@@ -34,8 +36,8 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideTokenInterceptor(): TokenInterceptor {
-        return TokenInterceptor()
+    fun provideTokenInterceptor(sessionManager: SessionManager): TokenInterceptor {
+        return TokenInterceptor(sessionManager)
     }
 
     @Provides
@@ -59,6 +61,7 @@ object NetworkModule {
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         val gson = GsonBuilder()
             .setLenient()
+            .serializeNulls()
             .create()
             
         return Retrofit.Builder()
@@ -72,5 +75,17 @@ object NetworkModule {
     @Singleton
     fun provideApiService(retrofit: Retrofit): ApiService {
         return retrofit.create(ApiService::class.java)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideChatApiService(retrofit: Retrofit): ChatApiService {
+        return retrofit.create(ChatApiService::class.java)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideAuthRepository(apiService: ApiService, sessionManager: SessionManager): AuthRepository {
+        return AuthRepository(apiService, sessionManager)
     }
 } 

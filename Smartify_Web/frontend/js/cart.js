@@ -88,7 +88,7 @@ const cart = {
       <tr>
         <td>
           <div class="cart-product">
-            <img src="${item.image || 'images/products/placeholder.jpg'}" alt="${item.name}">
+            <img src="${item.image || item.images?.[0] || 'images/products/placeholder.jpg'}" alt="${item.name}" onerror="this.src='images/products/placeholder.jpg';">
             <div>
               <h4>${item.name}</h4>
               <p>${item.category || ''}</p>
@@ -144,6 +144,9 @@ const cart = {
     
     // Event listener'ları ekle
     this.addEventListeners();
+    
+    // Sepet güncellendiğinde önerilen ürünleri yeniden yükle
+    displayRecommendedProducts();
   },
   
   // İndirim hesapla
@@ -284,7 +287,7 @@ const createProductCard = (product) => {
   return `
     <div class="product-card">
       <div class="product-image">
-        <img src="${product.image || 'images/products/placeholder.jpg'}" alt="${product.name}">
+        <img src="${product.image || product.images?.[0] || 'images/products/placeholder.jpg'}" alt="${product.name}" onerror="this.src='images/products/placeholder.jpg';">
       </div>
       <div class="product-content">
         <span class="product-category">${product.category || ''}</span>
@@ -312,46 +315,41 @@ const createProductCard = (product) => {
 // Önerilen ürünleri getir
 const getRecommendedProducts = async () => {
   try {
-    // Demo ürünleri (gerçek API hazır olunca bu kısım değiştirilecek)
-    const demoProducts = [
-      {
-        _id: 'prod1',
-        name: 'Creality Ender 3 V3 SE 3D Yazıcı',
-        category: '3D Yazıcılar',
-        price: 8999.90,
-        oldPrice: 10999.90,
-        image: 'https://www.evofone.com/UPLOAD/URUNLER/creality-ender-3-v3-se-3d-yazici-1.jpg'
-      },
-      {
-        _id: 'prod2',
-        name: 'Raspberry Pi 4 - 4GB',
-        category: 'Elektronik Komponentler',
-        price: 1899.90,
-        image: 'https://www.robotistan.com/raspberry-pi-4-4gb-29066-15-O.jpg'
-      },
-      {
-        _id: 'prod3',
-        name: 'Arduino Mega 2560 R3',
-        category: 'Elektronik Komponentler',
-        price: 799.90,
-        oldPrice: 899.90,
-        image: 'https://www.robotistan.com/arduino-mega-2560-r3-klon-usb-kablo-dahil-29097-14-O.jpg'
-      },
-      {
-        _id: 'prod4',
-        name: 'Akıllı Ev Başlangıç Seti',
-        category: 'Akıllı Ev',
-        price: 2499.90,
-        image: 'https://images.unsplash.com/photo-1558002038-1055907df827?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80'
-      }
-    ];
-    return demoProducts;
+    // Sepetteki ürünlerin kategorilerini al
+    const cartCategories = [...new Set(cart.items.map(item => item.category).filter(Boolean))];
     
-    // Gerçek API çağrısı (API hazır olduğunda aktif edilecek)
-    // const data = await fetchAPI('/products/featured');
-    // return data;
+    if (cartCategories.length === 0) {
+      // Sepette kategori bilgisi olan ürün yoksa populer ürünleri göster
+      const response = await fetch('/api/products?isPopular=true&limit=8');
+      if (!response.ok) throw new Error('Ürünler yüklenemedi');
+      const data = await response.json();
+      return data.products || data;
+    }
+    
+    // Sepetteki ürün kategorilerine göre ürün önerileri al
+    // Her kategoriden belirli sayıda ürün getir
+    const productsPromises = cartCategories.map(category => 
+      fetch(`/api/products?category=${category}&limit=4`)
+        .then(response => response.ok ? response.json() : [])
+        .then(data => data.products || data)
+    );
+    
+    const categoryProducts = await Promise.all(productsPromises);
+    
+    // Tüm kategori ürünlerini birleştir
+    let allRecommendedProducts = categoryProducts.flat();
+    
+    // Sepette olmayan ürünleri filtrele
+    const cartProductIds = cart.items.map(item => item._id);
+    allRecommendedProducts = allRecommendedProducts.filter(product => !cartProductIds.includes(product._id));
+    
+    // En fazla 12 ürün göster
+    return allRecommendedProducts.slice(0, 12);
+    
   } catch (error) {
     console.error('Önerilen ürünler yüklenirken hata:', error);
+    
+    // Hata durumunda demo ürünleri göster
     return [];
   }
 };
@@ -360,8 +358,31 @@ const getRecommendedProducts = async () => {
 const displayRecommendedProducts = async () => {
   const recommendedGrid = document.getElementById('recommended-products');
   if (recommendedGrid) {
+    // Yükleniyor göstergesini ekle
+    recommendedGrid.innerHTML = `<div class="loading-spinner"></div>`;
+    
     const products = await getRecommendedProducts();
-    recommendedGrid.innerHTML = products.map(createProductCard).join('');
+    
+    if (products.length === 0) {
+      recommendedGrid.innerHTML = `<p>Bu kategorilerde önerilebilecek başka ürün bulunamadı.</p>`;
+      return;
+    }
+    
+    // Slider container oluştur
+    const sliderHTML = `
+      <div class="product-slider">
+        <button class="slider-nav prev-btn"><i class="fas fa-chevron-left"></i></button>
+        <div class="slider-container">
+          ${products.map(createProductCard).join('')}
+        </div>
+        <button class="slider-nav next-btn"><i class="fas fa-chevron-right"></i></button>
+      </div>
+    `;
+    
+    recommendedGrid.innerHTML = sliderHTML;
+    
+    // Slider işlevselliğini ekle
+    initProductSlider();
     
     // Ürün sepete ekleme butonlarına event listener ekle
     recommendedGrid.querySelectorAll('.add-to-cart').forEach(btn => {
@@ -376,16 +397,65 @@ const displayRecommendedProducts = async () => {
   }
 };
 
+// Slider işlevselliği
+function initProductSlider() {
+  const sliderContainer = document.querySelector('.slider-container');
+  const prevBtn = document.querySelector('.prev-btn');
+  const nextBtn = document.querySelector('.next-btn');
+  
+  if (!sliderContainer || !prevBtn || !nextBtn) return;
+  
+  // Kaydırma miktarı (kart genişliği + margin)
+  const cardWidth = 280;
+  let position = 0;
+  const maxPosition = sliderContainer.scrollWidth - sliderContainer.clientWidth;
+  
+  // İlk yüklenmede prev butonunu devre dışı bırak
+  prevBtn.classList.add('disabled');
+  
+  // İleri butonu
+  nextBtn.addEventListener('click', () => {
+    position = Math.min(position + cardWidth, maxPosition);
+    sliderContainer.scrollTo({
+      left: position,
+      behavior: 'smooth'
+    });
+    updateButtonStates();
+  });
+  
+  // Geri butonu
+  prevBtn.addEventListener('click', () => {
+    position = Math.max(position - cardWidth, 0);
+    sliderContainer.scrollTo({
+      left: position,
+      behavior: 'smooth'
+    });
+    updateButtonStates();
+  });
+  
+  // Buton durumlarını güncelle
+  function updateButtonStates() {
+    prevBtn.classList.toggle('disabled', position <= 0);
+    nextBtn.classList.toggle('disabled', position >= maxPosition);
+  }
+  
+  // Kaydırma event'i
+  sliderContainer.addEventListener('scroll', () => {
+    position = sliderContainer.scrollLeft;
+    updateButtonStates();
+  });
+}
+
 // Sayfa yüklendiğinde
 document.addEventListener('DOMContentLoaded', () => {
   // Sepeti güncelle
   cart.updateUI();
   
-  // Önerilen ürünleri göster
-  displayRecommendedProducts();
-  
   // Bildirim stillerini ekle
   addToastStyles();
+  
+  // Slider stillerini ekle
+  addSliderStyles();
 });
 
 // Bildirim stilleri
@@ -485,6 +555,254 @@ function addToastStyles() {
         min-width: auto;
         width: calc(100% - 40px);
         max-width: none;
+      }
+    }
+  `;
+  
+  document.head.appendChild(style);
+}
+
+// Slider stilleri
+function addSliderStyles() {
+  // Eğer stil zaten eklendiyse tekrar ekleme
+  if (document.getElementById('product-slider-styles')) return;
+  
+  const style = document.createElement('style');
+  style.id = 'product-slider-styles';
+  style.textContent = `
+    .product-slider {
+      position: relative;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 25px;
+    }
+    
+    .slider-container {
+      display: flex;
+      gap: 1.5rem;
+      overflow-x: auto;
+      scroll-behavior: smooth;
+      scrollbar-width: none;  /* Firefox */
+      -ms-overflow-style: none;  /* IE and Edge */
+      padding: 10px 0;
+    }
+    
+    .slider-container::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Opera*/
+    }
+    
+    .product-card {
+      min-width: 280px;
+      max-width: 280px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      margin-bottom: 5px;
+    }
+    
+    .product-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    
+    .product-image {
+      position: relative;
+      width: 100%;
+      height: 200px;
+      overflow: hidden;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .product-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s ease;
+    }
+    
+    .product-card:hover .product-image img {
+      transform: scale(1.05);
+    }
+    
+    .product-content {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+    
+    .product-category {
+      font-size: 0.75rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.5rem;
+    }
+    
+    .product-title {
+      font-size: 1rem;
+      font-weight: 500;
+      margin: 0 0 0.5rem 0;
+      line-height: 1.4;
+    }
+    
+    .product-title a {
+      color: var(--text-color);
+      text-decoration: none;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      height: 2.8rem;
+    }
+    
+    .product-price {
+      margin: 0.5rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .current-price {
+      font-weight: 600;
+      font-size: 1.125rem;
+      color: var(--primary-color);
+    }
+    
+    .old-price {
+      font-size: 0.875rem;
+      color: #999;
+      text-decoration: line-through;
+    }
+    
+    .product-actions {
+      margin-top: auto;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
+      padding-top: 0.5rem;
+    }
+    
+    .add-to-cart {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 0.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: background-color 0.2s;
+    }
+    
+    .add-to-cart:hover {
+      background-color: var(--secondary-color);
+    }
+    
+    .wishlist-btn {
+      background-color: #f0f0f0;
+      color: #666;
+      border: none;
+      border-radius: 4px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .wishlist-btn:hover {
+      background-color: #ffeded;
+      color: #ff5252;
+    }
+    
+    .slider-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: white;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 1;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    
+    .slider-nav.prev-btn {
+      left: 0;
+    }
+    
+    .slider-nav.next-btn {
+      right: 0;
+    }
+    
+    .slider-nav:hover {
+      background-color: var(--primary-color);
+      color: white;
+    }
+    
+    .slider-nav.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-top-color: var(--primary-color);
+      animation: spin 1s ease infinite;
+      margin: 30px auto;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    @media (max-width: 992px) {
+      .recommended-section {
+        overflow: hidden;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .slider-nav {
+        width: 35px;
+        height: 35px;
+      }
+      
+      .product-slider {
+        padding: 0 20px;
+      }
+    }
+    
+    @media (max-width: 576px) {
+      .product-slider {
+        padding: 0 15px;
+      }
+      
+      .slider-nav.prev-btn {
+        left: -5px;
+      }
+      
+      .slider-nav.next-btn {
+        right: -5px;
       }
     }
   `;

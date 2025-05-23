@@ -61,43 +61,80 @@ async function checkAdminAuth() {
     const token = localStorage.getItem('adminToken');
     
     if (!token) {
-        window.location.href = '/admin/login.html';
+        console.error('Token bulunamadı, login sayfasına yönlendiriliyor');
+        window.location.href = '/admin/login.html?expired=true';
         return;
     }
     
+    // Son kontrol zamanını kontrol et
+    const lastCheck = localStorage.getItem('lastAuthCheck');
+    const now = Date.now();
+    
+    // Eğer son 30 dakika içinde kontrol edildiyse tekrar kontrol etme
+    if (lastCheck && (now - parseInt(lastCheck)) < 30 * 60 * 1000) {
+        console.log('Son token kontrolü 30 dakikadan yeni, tekrar kontrol edilmiyor.');
+        return;
+    }
+    
+    console.log('Token kontrolü yapılıyor...');
+    
     // Token'ın geçerliliğini kontrol et
     try {
-        const response = await fetch('/api/auth/me', {
+        const response = await fetch('http://localhost:3000/api/auth/me', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
         
+        // Response HTML dönüyorsa muhtemelen API yanıt vermiyor veya yönlendirme var
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('text/html')) {
+            console.error('API HTML yanıtı döndü. API çalışmıyor olabilir.');
+            showNotification('API sunucusuna bağlanılamadı. API çalışmıyor olabilir.', 'error');
+            return;
+        }
+        
         if (!response.ok) {
-            // Token geçersiz veya süresi dolmuş, kullanıcıyı login sayfasına yönlendir
+            console.error(`Token kontrol hatası: ${response.status}`);
             localStorage.removeItem('adminToken');
+            localStorage.removeItem('lastAuthCheck');
             window.location.href = '/admin/login.html?expired=true';
             return;
         }
         
-        // Token geçerli, kullanıcı bilgilerini al
         const userData = await response.json();
-        if (!userData.isAdmin) {
+        
+        if (!userData || !userData.isAdmin) {
             // Kullanıcı admin değil
+            console.error('Kullanıcı admin değil veya geçersiz token');
             localStorage.removeItem('adminToken');
+            localStorage.removeItem('lastAuthCheck');
             window.location.href = '/admin/login.html?unauthorized=true';
             return;
         }
+        
+        console.log('Token doğrulandı, kullanıcı:', userData.name);
+        
+        // Son kontrol zamanını kaydet
+        localStorage.setItem('lastAuthCheck', now.toString());
+        
+        // Çıkış butonuna event listener ekle
+        const logoutButton = document.getElementById('adminLogout');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                localStorage.removeItem('adminToken');
+                localStorage.removeItem('lastAuthCheck');
+                window.location.href = '/admin/login.html';
+            });
+        }
     } catch (error) {
         console.error('Token doğrulama hatası:', error);
-    }
-    
-    // Çıkış butonuna event listener ekle
-    document.getElementById('adminLogout').addEventListener('click', (e) => {
-        e.preventDefault();
+        // Token doğrulama hatası, kullanıcıyı yönlendir
         localStorage.removeItem('adminToken');
-        window.location.href = '/admin/login.html';
-    });
+        localStorage.removeItem('lastAuthCheck');
+        window.location.href = '/admin/login.html?expired=true';
+    }
 }
 
 // Kategorileri yükle
@@ -169,15 +206,68 @@ async function loadProducts() {
         isLoading = true;
         showLoading('Ürünler yükleniyor...');
         
-        const response = await fetch('/api/products');
-        if (!response.ok) throw new Error('Ürünler yüklenemedi');
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            console.error('Token bulunamadı, login sayfasına yönlendiriliyor');
+            window.location.href = '/admin/login.html?expired=true';
+            return;
+        }
         
-        products = await response.json();
-        isLoading = false;
-        displayProducts(products);
+        console.log('Ürün API isteği yapılıyor...');
+        
+        // Doğrudan fetch kullanarak API isteği yapalım
+        const baseURL = 'http://localhost:3000/api';
+        const response = await fetch(`${baseURL}/products`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        });
+        
+        // Response HTML dönüyorsa muhtemelen API yanıt vermiyor veya yönlendirme var
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('text/html')) {
+            console.error('Ürünleri yüklerken API HTML yanıtı döndü.');
+            throw new Error('API sunucusuna bağlanılamadı. Lütfen API sunucusunun çalıştığından emin olun.');
+        }
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                // Token süresi dolmuş olabilir, kullanıcıyı login sayfasına yönlendir
+                console.error('Yetkisiz erişim (401), token geçersiz');
+                localStorage.removeItem('adminToken');
+                localStorage.removeItem('lastAuthCheck');
+                window.location.href = '/admin/login.html?expired=true';
+                return;
+            }
+            const errorText = await response.text();
+            console.error('API hata yanıtı:', errorText);
+            throw new Error('Ürünler yüklenemedi: ' + response.status);
+        }
+        
+        let jsonData;
+        try {
+            const text = await response.text();
+            console.log('API yanıtı:', text.substring(0, 100) + '...');
+            try {
+                jsonData = JSON.parse(text);
+                console.log('Ürünler başarıyla yüklendi:', jsonData.length);
+                products = jsonData;
+                isLoading = false;
+                displayProducts(products);
+            } catch (parseError) {
+                console.error('JSON parse hatası:', parseError);
+                throw new Error('API yanıtı geçerli JSON formatında değil');
+            }
+        } catch (jsonError) {
+            console.error('Yanıt işleme hatası:', jsonError);
+            throw new Error('API yanıtı işlenirken hata oluştu');
+        }
     } catch (error) {
         console.error('Ürünleri yükleme hatası:', error);
-        showNotification('Ürünler yüklenirken bir hata oluştu', 'error');
+        showNotification('Ürünler yüklenirken bir hata oluştu: ' + error.message, 'error');
         isLoading = false;
         displayProducts([]);
     }
@@ -413,7 +503,8 @@ function fillFormWithProduct(product) {
 
 // Form Operations
 async function handleProductSubmit(e) {
-    e.preventDefault();
+    e.preventDefault(); // Form gönderimini engelle
+    console.log('Form gönderimi engellendi ve handleProductSubmit çalıştırıldı');
     
     try {
         // Kaydet butonunu devre dışı bırak
@@ -480,6 +571,8 @@ async function saveProduct() {
         const productId = document.getElementById('productId').value;
         const isEdit = !!productId;
         
+        console.log('saveProduct başlatıldı, isEdit:', isEdit, 'productId:', productId);
+        
         // Form verilerini al
         const formData = new FormData(document.getElementById('productForm'));
         
@@ -491,6 +584,8 @@ async function saveProduct() {
             showNotification('Lütfen ana kategori ve alt kategori seçin', 'error');
             return;
         }
+        
+        console.log('Kategori bilgileri:', mainCategory, category);
         
         // Kategori yolunu ve isimlerini ekle
         formData.append('categoryPath', JSON.stringify([mainCategory, category]));
@@ -516,8 +611,11 @@ async function saveProduct() {
         }
         
         // API endpoint ve method
-        const url = isEdit ? `/api/products/${productId}` : '/api/products';
+        const baseURL = 'http://localhost:3000'; // Tam URL kullan
+        const url = isEdit ? `${baseURL}/api/products/${productId}` : `${baseURL}/api/products`;
         const method = isEdit ? 'PUT' : 'POST';
+        
+        console.log('API isteği hazırlanıyor:', method, url);
         
         // Admin token'ı al
         const token = localStorage.getItem('adminToken');
@@ -529,14 +627,23 @@ async function saveProduct() {
             return;
         }
         
+        // Form verilerini kontrol et - sadece debug için
+        for (let [key, value] of formData.entries()) {
+            console.log(`Form verisi: ${key} = ${value}`);
+        }
+        
         // API isteği
+        console.log('API isteği gönderiliyor...');
         const response = await fetch(url, {
             method,
             body: formData,
             headers: {
                 'Authorization': `Bearer ${token}`
-            }
+            },
+            credentials: 'same-origin' // Güvenli çerezleri dahil et
         });
+        
+        console.log('API yanıtı alındı:', response.status);
         
         if (!response.ok) {
             // Eğer 401 hatası alınıyorsa (Unauthorized), oturum süresi dolmuş olabilir
@@ -555,6 +662,10 @@ async function saveProduct() {
             const error = await response.json();
             throw new Error(error.message || 'Ürün kaydedilirken bir hata oluştu');
         }
+        
+        // Başarılı yanıtı işle
+        const savedProduct = await response.json();
+        console.log('Ürün başarıyla kaydedildi:', savedProduct);
         
         // Başarılı mesajı göster
         showNotification(`Ürün başarıyla ${isEdit ? 'güncellendi' : 'eklendi'}`, 'success');

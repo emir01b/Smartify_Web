@@ -1,27 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const authController = require('../controllers/authController');
+const {
+  registerUser,
+  loginUser,
+  verifyUser,
+  getProfile
+} = require('../controllers/authController');
 const { authenticateToken } = require('../middleware/auth');
 
-// Kullanıcı ön kaydı - E-posta doğrulama kodu gönderir
-router.post('/pre-register', authController.preRegister);
+router.post('/register', registerUser);
+router.post('/login', loginUser);
+router.get('/verify/:token', verifyUser);
+router.get('/me', authenticateToken, getProfile);
 
-// Kullanıcı kaydı tamamlama ve doğrulama
-router.post('/complete-register', authController.completeRegister);
+// API bağlantı kontrolü için endpoint
+router.get('/check', authenticateToken, (req, res) => {
+  res.status(200).json({ message: 'API bağlantı kontrolü başarılı' });
+});
 
-// Kullanıcı kaydı - Geleneksel yöntem
-router.post('/register', authController.register);
-
-// E-posta doğrulama
-router.post('/verify', authController.verifyEmail);
-
-// Doğrulama kodunu tekrar gönder
-router.post('/resend-verification', authController.resendVerificationCode);
-
-// Kullanıcı girişi
-router.post('/login', authController.login);
-
-// Kullanıcı profili bilgilerini getir
-router.get('/me', authenticateToken, authController.getProfile);
-
-module.exports = router; 
+module.exports = router;

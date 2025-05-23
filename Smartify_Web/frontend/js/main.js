@@ -1,5 +1,9 @@
 // API URL
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'http://localhost:3000';
+
+// API URL'yi global olarak tanımla
+window.API_URL = API_URL;
+console.log('main.js: window.API_URL global olarak ayarlandı:', window.API_URL);
 
 // API istekleri için yardımcı fonksiyon
 const fetchAPI = async (endpoint, options = {}) => {
@@ -8,17 +12,61 @@ const fetchAPI = async (endpoint, options = {}) => {
   const defaultOptions = {
     headers: {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` })
     }
   };
 
   try {
+    // URL'in başında / olup olmadığını kontrol et
+    if (!endpoint.startsWith('/')) {
+      endpoint = '/' + endpoint;
+    }
+
+    console.log('API İsteği:', API_URL + endpoint);
+
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...defaultOptions,
-      ...options
+      ...options,
+      headers: {
+        ...defaultOptions.headers,
+        ...(options.headers || {})
+      }
     });
 
+    // Response HTML dönüyorsa muhtemelen API yanıt vermiyor
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.error('API JSON yerine farklı bir yanıt döndürdü:', contentType);
+      throw new Error('API sunucusuna bağlanılamadı veya sunucu JSON yanıtı vermedi.');
+    }
+
     if (!response.ok) {
+      // Özel HTTP durum kodları işleme
+      if (response.status === 401) {
+        // Token süresi doldu veya geçersiz
+        console.error('Oturum süresi doldu veya geçersiz token');
+        removeToken();
+        removeCurrentUser();
+        
+        // Admin token'ı da temizleyelim
+        if (localStorage.getItem('adminToken')) {
+          localStorage.removeItem('adminToken');
+        }
+        
+        if (typeof showToast === 'function') {
+          showToast('Oturum süreniz doldu, lütfen tekrar giriş yapın', 'error');
+        }
+        
+        // Admin sayfasında mıyız kontrol et
+        if (window.location.pathname.includes('/admin/')) {
+          window.location.href = '/admin/login.html?expired=true';
+        } else {
+          window.location.href = '/login.html?expired=true';
+        }
+        return null;
+      }
+
       const error = await response.json();
       throw new Error(error.message || 'Bir hata oluştu');
     }
@@ -28,7 +76,7 @@ const fetchAPI = async (endpoint, options = {}) => {
     if (typeof showToast === 'function') {
       showToast(error.message, 'error');
     } else {
-      console.error(error.message);
+      console.error('API Hatası:', error.message);
     }
     throw error;
   }
@@ -517,14 +565,14 @@ const updateHeader = () => {
   const cart = JSON.parse(localStorage.getItem('cart')) || [];
   
   if (cartCount) {
-    cartCount.textContent = cart.reduce((total, item) => total + item.quantity, 0);
+    cartCount.textContent = cart.reduce((total, item) => total + (item.quantity || 1), 0);
   }
 
   // Kullanıcı hesap bölümünü güncelle
   const userAccountSection = document.getElementById('user-account-section');
   if (userAccountSection) {
-    if (user) {
-      console.log("Kullanıcı giriş yapmış:", user); // Debug için eklendi
+    if (user && getToken()) {
+      console.log("Kullanıcı giriş yapmış:", user); // Debug için
       // Kullanıcı giriş yapmışsa, kullanıcı menüsünü göster
       userAccountSection.innerHTML = `
         <div class="user-menu">
@@ -537,7 +585,7 @@ const updateHeader = () => {
             <a href="account.html"><i class="fas fa-user"></i> Hesabım</a>
             <a href="account.html#orders"><i class="fas fa-box"></i> Siparişlerim</a>
             <a href="account.html#address"><i class="fas fa-map-marker-alt"></i> Adreslerim</a>
-            <a href="wishlist.html"><i class="fas fa-heart"></i> Favorilerim</a>
+            <a href="favorites.html"><i class="fas fa-heart"></i> Favorilerim</a>
             <a href="#" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Çıkış Yap</a>
           </div>
         </div>
@@ -547,16 +595,18 @@ const updateHeader = () => {
       const userMenuButton = userAccountSection.querySelector('.user-menu-button');
       const userMenu = userAccountSection.querySelector('.user-menu');
       
-      userMenuButton.addEventListener('click', () => {
-        userMenu.classList.toggle('active');
-      });
-      
-      // Menü dışına tıklandığında menüyü kapat
-      document.addEventListener('click', (e) => {
-        if (userMenu && !userMenu.contains(e.target)) {
-          userMenu.classList.remove('active');
-        }
-      });
+      if (userMenuButton && userMenu) {
+        userMenuButton.addEventListener('click', () => {
+          userMenu.classList.toggle('active');
+        });
+        
+        // Menü dışına tıklandığında menüyü kapat
+        document.addEventListener('click', (e) => {
+          if (userMenu && !userMenu.contains(e.target) && !userMenuButton.contains(e.target)) {
+            userMenu.classList.remove('active');
+          }
+        });
+      }
       
       // Çıkış butonuna tıklama
       const logoutBtn = document.getElementById('logout-btn');
@@ -567,7 +617,7 @@ const updateHeader = () => {
         });
       }
     } else {
-      console.log("Kullanıcı giriş yapmamış"); // Debug için eklendi
+      console.log("Kullanıcı giriş yapmamış"); // Debug için
       // Kullanıcı giriş yapmamışsa, sadece giriş butonunu göster
       userAccountSection.innerHTML = `
         <div class="auth-buttons">
@@ -592,6 +642,13 @@ const fetchData = async (endpoint, options = {}) => {
   try {
     const token = getToken();
     
+    // Token yoksa ve korumalı bir endpoint ise login sayfasına yönlendir
+    if (!token && endpoint.includes('/api/orders')) {
+      console.log('Token bulunamadı, login sayfasına yönlendiriliyor');
+      window.location.href = 'login.html';
+      return null;
+    }
+    
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
       headers: {
@@ -603,8 +660,9 @@ const fetchData = async (endpoint, options = {}) => {
     
     const data = await response.json();
     
-    // Token süresi dolduysa otomatik çıkış yap
-    if (response.status === 401 && data.message === 'Token süresi doldu') {
+    // Token süresi dolduysa veya geçersizse otomatik çıkış yap
+    if (response.status === 401) {
+      console.log('401 hatası alındı, çıkış yapılıyor');
       logout();
       window.location.href = 'login.html?expired=true';
       return null;
@@ -635,9 +693,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Ana script yüklendiğini bildir
   window.dispatchEvent(new Event('main_js_loaded'));
-  
-  // API URL'i window nesnesine aktar
-  window.API_URL = API_URL;
 });
 
 // Window nesnesi üzerinde fonksiyonları tanımla

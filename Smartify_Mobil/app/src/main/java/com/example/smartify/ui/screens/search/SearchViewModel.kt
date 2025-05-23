@@ -1,5 +1,6 @@
 package com.example.smartify.ui.screens.search
 
+import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -49,11 +50,39 @@ class SearchViewModel @Inject constructor(
                 // Küçük bir gecikme ekle, kullanıcı yazmayı bitirebilsin
                 delay(300)
                 
-                val products = productRepository.searchProducts(query)
-                _state.value = _state.value.copy(
-                    products = products,
-                    isLoading = false
-                )
+                try {
+                    // İlk önce özel arama API'sini dene
+                    val products = productRepository.searchProducts(query)
+                    _state.value = _state.value.copy(
+                        products = products,
+                        isLoading = false
+                    )
+                } catch (e: Exception) {
+                    // Arama API'si başarısız olursa, tüm ürünleri al ve istemci tarafında filtrele
+                    Log.w("SearchViewModel", "Arama API'si başarısız oldu, tüm ürünler yerel olarak filtreleniyor", e)
+                    
+                    try {
+                        val allProducts = productRepository.getProducts()
+                        // İstemci tarafında arama yap
+                        val filteredProducts = allProducts.filter { product ->
+                            product.name.contains(query, ignoreCase = true) ||
+                            product.description.contains(query, ignoreCase = true) ||
+                            product.category.contains(query, ignoreCase = true) ||
+                            (product.mainCategory?.contains(query, ignoreCase = true) ?: false)
+                        }
+                        
+                        _state.value = _state.value.copy(
+                            products = filteredProducts,
+                            isLoading = false,
+                            error = if (filteredProducts.isEmpty()) "Aramanıza uygun ürün bulunamadı" else null
+                        )
+                    } catch (fallbackException: Exception) {
+                        _state.value = _state.value.copy(
+                            error = "Arama yapılamıyor: ${fallbackException.message}",
+                            isLoading = false
+                        )
+                    }
+                }
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     error = e.message ?: "Ürünler yüklenirken bir hata oluştu",
@@ -64,24 +93,51 @@ class SearchViewModel @Inject constructor(
     }
     
     fun filterByCategory(category: String) {
+        Log.d("SearchViewModel", "Kategori filtresi başlatıldı: $category")
         viewModelScope.launch {
             try {
                 _state.value = _state.value.copy(isLoading = true, error = null)
+                Log.d("SearchViewModel", "Yükleniyor durumu ayarlandı")
                 
                 val products = if (category == "Tümü") {
+                    Log.d("SearchViewModel", "Tüm ürünler getiriliyor")
                     productRepository.getProducts()
                 } else {
-                    productRepository.getProductsByCategory(category)
+                    try {
+                        Log.d("SearchViewModel", "Kategori ürünleri getiriliyor: $category")
+                        productRepository.getProductsByCategory(category)
+                    } catch (e: Exception) {
+                        Log.e("SearchViewModel", "Kategori ürünleri getirilirken hata: ${e.message}")
+                        _state.value = _state.value.copy(
+                            error = "Bu kategoride ürün bulunamadı: $category",
+                            isLoading = false,
+                            products = emptyList()
+                        )
+                        return@launch
+                    }
                 }
                 
-                _state.value = _state.value.copy(
-                    products = products,
-                    isLoading = false
-                )
+                if (products.isEmpty()) {
+                    Log.w("SearchViewModel", "Ürün bulunamadı: $category")
+                    _state.value = _state.value.copy(
+                        error = "Bu kategoride ürün bulunamadı: $category",
+                        isLoading = false,
+                        products = emptyList()
+                    )
+                } else {
+                    Log.d("SearchViewModel", "Ürünler başarıyla getirildi. Ürün sayısı: ${products.size}")
+                    _state.value = _state.value.copy(
+                        products = products,
+                        isLoading = false,
+                        error = null
+                    )
+                }
             } catch (e: Exception) {
+                Log.e("SearchViewModel", "Kategori filtreleme hatası: ${e.message}")
                 _state.value = _state.value.copy(
-                    error = e.message ?: "Ürünler filtrelenirken bir hata oluştu",
-                    isLoading = false
+                    error = "Kategori filtrelenirken bir hata oluştu: ${e.message}",
+                    isLoading = false,
+                    products = emptyList()
                 )
             }
         }

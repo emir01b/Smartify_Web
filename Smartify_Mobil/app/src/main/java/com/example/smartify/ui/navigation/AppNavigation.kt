@@ -15,6 +15,10 @@ import com.example.smartify.ui.screens.register.RegisterScreen
 import com.example.smartify.ui.screens.search.SearchScreen
 import com.example.smartify.ui.screens.splash.SplashScreen
 import com.example.smartify.ui.screens.wishlist.WishlistScreen
+import com.example.smartify.ui.screens.product_detail.ProductDetailScreen
+import com.example.smartify.ui.orders.OrdersScreen
+import com.example.smartify.ui.screens.settings.SettingsScreen
+import com.example.smartify.ui.screens.address.AddressesScreen
 import com.example.smartify.utils.Constants
 
 @Composable
@@ -72,10 +76,7 @@ fun AppNavigation(
             HomeScreen(
                 onNavigateToProductDetail = { productId ->
                     navController.navigate(Constants.Routes.PRODUCT_DETAIL.replace("{productId}", productId))
-                },
-                onNavigateToCart = { navController.navigate(Constants.Routes.CART) },
-                onNavigateToWishlist = { navController.navigate(Constants.Routes.WISHLIST) },
-                onNavigateToProfile = { navController.navigate(Constants.Routes.PROFILE) }
+                }
             )
         }
         
@@ -93,8 +94,8 @@ fun AppNavigation(
             ProfileScreen(
                 onNavigateToOrders = { navController.navigate(Constants.Routes.ORDERS) },
                 onNavigateToWishlist = { navController.navigate(Constants.Routes.WISHLIST) },
-                onNavigateToAddresses = { },  // Henüz adresler sayfası yok
-                onNavigateToSettings = { },  // Henüz ayarlar sayfası yok
+                onNavigateToAddresses = { navController.navigate(Constants.Routes.ADDRESSES) },
+                onNavigateToSettings = { navController.navigate(Constants.Routes.SETTINGS) },
                 onNavigateToLogin = {
                     navController.navigate(Constants.Routes.LOGIN) {
                         popUpTo(Constants.Routes.HOME) { inclusive = true }
@@ -131,21 +132,18 @@ fun AppNavigation(
             )
         ) { backStackEntry ->
             val productId = backStackEntry.arguments?.getString("productId") ?: ""
-            // ProductDetailScreen(
-            //     productId = productId,
-            //     onNavigateBack = { navController.popBackStack() },
-            //     onNavigateToCart = { navController.navigate(Constants.Routes.CART) }
-            // )
+            ProductDetailScreen(
+                productId = productId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToCart = { navController.navigate(Constants.Routes.CART) }
+            )
         }
         
         // Orders Screen
         composable(Constants.Routes.ORDERS) {
-            // OrdersScreen(
-            //     onNavigateBack = { navController.popBackStack() },
-            //     onNavigateToOrderDetail = { orderId ->
-            //         navController.navigate(Constants.Routes.ORDER_DETAIL.replace("{orderId}", orderId))
-            //     }
-            // )
+            OrdersScreen(
+                navigateBack = { navController.popBackStack() }
+            )
         }
         
         // Order Detail Screen
@@ -174,6 +172,20 @@ fun AppNavigation(
             //         }
             //     }
             // )
+        }
+        
+        // Settings Screen
+        composable(Constants.Routes.SETTINGS) {
+            SettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        
+        // Addresses Screen
+        composable(Constants.Routes.ADDRESSES) {
+            AddressesScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 } 

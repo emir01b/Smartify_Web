@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Dashboard verilerini yükle
 async function loadDashboardData() {
     try {
-        const stats = await fetchAPI('/api/orders/stats');
+        const stats = await fetchAPI('/orders/stats');
         
         if (!stats) return;
         

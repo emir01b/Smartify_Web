@@ -33,7 +33,15 @@ const userSchema = new mongoose.Schema({
     verificationCodeExpires: {
         type: Date,
         default: null
-    }
+    },
+    favorites: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product'
+    }],
+    orders: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Order'
+    }]
 }, {
     timestamps: true
 });
