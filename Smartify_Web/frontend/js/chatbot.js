@@ -40,8 +40,9 @@ document.addEventListener('DOMContentLoaded', function() {
   const userInput = document.getElementById('user-input');
   const sendButton = document.getElementById('send-button');
 
-  // API anahtarı
-  const apiKey = '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';
+  // API anahtarı - OpenRouter panelinden güncel API anahtarını buraya ekleyin
+  // Geçersiz API anahtarı 401 hatasına sebep oluyor
+  const apiKey = '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';
   
   // Model adı
   const modelName = 'google/gemma-3n-e4b-it:free';

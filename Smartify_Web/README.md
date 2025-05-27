@@ -172,5 +172,5 @@ Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.
 ---
 
 <div align="center">
-  <p>© 2023 Smartify Web. Tüm hakları saklıdır.</p>
+  <p>© 2025 Smartify Web. Tüm hakları saklıdır.</p>
 </div>
